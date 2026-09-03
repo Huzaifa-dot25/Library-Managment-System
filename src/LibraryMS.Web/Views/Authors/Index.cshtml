@@ -1,0 +1,158 @@
+@{
+    ViewData["Title"] = "Manage Authors";
+}
+
+<!-- Page Header -->
+<div class="lms-page-header">
+    <div>
+        <h4><i class="bi bi-person-lines-fill"></i> Manage Authors</h4>
+        <div class="header-subtitle">Add, edit or remove authors. Changes are saved per row.</div>
+    </div>
+    <button class="btn-lms-outline" id="btnAddRow">
+        <i class="bi bi-plus-lg"></i> Add Row
+    </button>
+</div>
+
+<!-- Grid -->
+<div class="lms-grid-wrapper">
+    <div class="lms-grid-scroll">
+        <table class="lms-table">
+            <thead>
+                <tr>
+                    <th style="width:55%">Author Name</th>
+                    <th style="width:18%">Gender</th>
+                    <th style="width:22%">Country</th>
+                    <th style="width:5%;text-align:center">Delete</th>
+                </tr>
+            </thead>
+            <tbody id="gridBody">
+                <tr><td colspan="4" class="text-center py-4 text-muted">
+                    <i class="bi bi-hourglass-split me-2"></i>Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="lms-action-bar">
+        <button class="btn-lms-primary" id="btnSaveClose">
+            <i class="bi bi-save-fill"></i> Save &amp; Close
+        </button>
+        <button class="btn-lms-success" id="btnSave">
+            <i class="bi bi-save2"></i> Save
+        </button>
+        <button class="btn-lms-secondary" onclick="window.location='/'">
+            <i class="bi bi-x-lg"></i> Close
+        </button>
+        <span class="ms-auto text-muted-sm" id="statusMsg"></span>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const genderOptions  = ['', 'Male', 'Female', 'Other'];
+    const countryOptions = ['', 'Pakistan', 'United Kingdom', 'United States', 'India',
+        'Canada', 'Australia', 'UAE', 'Saudi Arabia', 'Other'];
+
+    function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    function buildSelect(opts, val, cls) {
+        return '<select class="grid-input ' + cls + '">' +
+            opts.map(function(o) {
+                return '<option value="' + o + '"' + (o===(val||'')?'selected':'') + '>' + (o||'-- select --') + '</option>';
+            }).join('') + '</select>';
+    }
+
+    function renderRow(a) {
+        return '<tr data-id="' + a.authorId + '" data-dirty="false">' +
+            '<td><input type="text" class="grid-input col-name" value="' + esc(a.name) + '" placeholder="Author name..." /></td>' +
+            '<td>' + buildSelect(genderOptions, a.gender, 'col-gender') + '</td>' +
+            '<td>' + buildSelect(countryOptions, a.country, 'col-country') + '</td>' +
+            '<td class="text-center"><button class="btn-grid-delete" data-id="' + a.authorId + '" title="Delete"><i class="bi bi-trash3"></i></button></td>' +
+            '</tr>';
+    }
+
+    function blankRow() { return renderRow({ authorId:0, name:'', gender:'', country:'' }); }
+
+    function loadGrid() {
+        $.get('/Authors/GetAll', function(data) {
+            $('#gridBody').html(data.map(renderRow).join('') + blankRow());
+            bindEvents();
+        });
+    }
+
+    function bindEvents() {
+        $('#gridBody').off('input change').on('input change', 'input,select', function() {
+            var $row = $(this).closest('tr').attr('data-dirty','true').addClass('row-dirty');
+            if ($row.is(':last-child') && $row.attr('data-id')==='0') {
+                $('#gridBody').append(blankRow());
+                bindEvents();
+            }
+        });
+        $('#gridBody').off('click','.btn-grid-delete').on('click','.btn-grid-delete', function() {
+            var id = parseInt($(this).data('id'));
+            var $row = $(this).closest('tr');
+            if (id === 0) { $row.remove(); return; }
+            if (!confirmDelete('Delete this author?')) return;
+            $(this).html('<i class="bi bi-hourglass-split"></i>');
+            $.post('/Authors/Delete', JSON.stringify(id), function(res) {
+                if (res.success) { $row.fadeOut(200, function(){ $(this).remove(); }); showToast('Author deleted.'); }
+                else showToast(res.message, 'error');
+            }, 'json');
+        });
+        $('#gridBody').off('click','tr').on('click','tr', function(e) {
+            if ($(e.target).closest('button,input,select').length) return;
+            $('#gridBody tr').removeClass('row-selected');
+            $(this).addClass('row-selected');
+        });
+    }
+
+    function collectDirty() {
+        var payload = [];
+        $('#gridBody tr[data-dirty="true"]').each(function() {
+            var name = $(this).find('.col-name').val().trim();
+            if (!name) return;
+            payload.push({
+                authorId: parseInt($(this).attr('data-id'))||0,
+                name:     name,
+                gender:   $(this).find('.col-gender').val() || null,
+                country:  $(this).find('.col-country').val() || null
+            });
+        });
+        return payload;
+    }
+
+    function doSave(andClose) {
+        var payload = collectDirty();
+        if (!payload.length) {
+            showToast('No unsaved changes.', 'info');
+            if (andClose) window.location = '/';
+            return;
+        }
+        $('#statusMsg').html('<i class="bi bi-hourglass-split me-1"></i>Saving...');
+        $.ajax({
+            url:'/Authors/SaveAll', type:'POST', contentType:'application/json',
+            data: JSON.stringify(payload),
+            success: function(res) {
+                $('#statusMsg').text('');
+                if (res.success) {
+                    showToast('Authors saved successfully.');
+                    if (andClose) window.location = '/';
+                    else loadGrid();
+                } else {
+                    showToast(res.message, 'error');
+                }
+            }
+        });
+    }
+
+    $('#btnSave').click(function()      { doSave(false); });
+    $('#btnSaveClose').click(function() { doSave(true);  });
+    $('#btnAddRow').click(function() {
+        $('#gridBody').append(blankRow());
+        bindEvents();
+        $('#gridBody tr:last-child .col-name').focus();
+    });
+
+    loadGrid();
+</script>
+}

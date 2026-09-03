@@ -1,0 +1,124 @@
+@{
+    ViewData["Title"] = "Manage Types";
+}
+
+<div class="lms-page-header">
+    <div>
+        <h4><i class="bi bi-bookmark-star-fill"></i> Manage Types</h4>
+        <div class="header-subtitle">Configure book type classifications and linked accounts.</div>
+    </div>
+    <button class="btn-lms-outline" id="btnAddRow">
+        <i class="bi bi-plus-lg"></i> Add Row
+    </button>
+</div>
+
+<div class="lms-grid-wrapper">
+    <div class="lms-grid-scroll">
+        <table class="lms-table">
+            <thead>
+                <tr>
+                    <th style="width:6%;text-align:center">Active</th>
+                    <th style="width:38%">Type Name</th>
+                    <th style="width:38%">Link Account</th>
+                    <th style="width:5%;text-align:center">Delete</th>
+                </tr>
+            </thead>
+            <tbody id="gridBody">
+                <tr><td colspan="4" class="text-center py-4 text-muted">
+                    <i class="bi bi-hourglass-split me-2"></i>Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="lms-action-bar">
+        <button class="btn-lms-success" id="btnSave">
+            <i class="bi bi-save2"></i> Save
+        </button>
+        <button class="btn-lms-secondary" onclick="window.location='/'">
+            <i class="bi bi-x-lg"></i> Close
+        </button>
+        <span class="ms-auto text-muted-sm" id="statusMsg"></span>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const linkAccounts = [{ value:0, label:'Library Books' }, { value:1, label:'Academic Books' }];
+
+    function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    function linkSelect(val) {
+        return '<select class="grid-input col-link">' +
+            linkAccounts.map(function(o) {
+                return '<option value="' + o.value + '"' + (o.value===val?' selected':'') + '>' + o.label + '</option>';
+            }).join('') + '</select>';
+    }
+
+    function renderRow(bt) {
+        return '<tr data-id="' + bt.bookTypeId + '" data-dirty="false">' +
+            '<td class="text-center"><input type="checkbox" class="grid-checkbox col-active"' + (bt.isActive?' checked':'') + ' /></td>' +
+            '<td><input type="text" class="grid-input col-name" value="' + esc(bt.typeName) + '" placeholder="Type name..." /></td>' +
+            '<td>' + linkSelect(bt.linkedAccount) + '</td>' +
+            '<td class="text-center"><button class="btn-grid-delete" data-id="' + bt.bookTypeId + '" title="Delete"><i class="bi bi-trash3"></i></button></td>' +
+            '</tr>';
+    }
+
+    function blankRow() { return renderRow({ bookTypeId:0, typeName:'', linkedAccount:0, isActive:true }); }
+
+    function loadGrid() {
+        $.get('/BookTypes/GetAll', function(data) {
+            $('#gridBody').html(data.map(renderRow).join('') + blankRow());
+            bindEvents();
+        });
+    }
+
+    function bindEvents() {
+        $('#gridBody').off('input change').on('input change', 'input,select', function() {
+            var $row = $(this).closest('tr').attr('data-dirty','true').addClass('row-dirty');
+            if ($row.is(':last-child') && $row.attr('data-id')==='0') {
+                $('#gridBody').append(blankRow());
+                bindEvents();
+            }
+        });
+        $('#gridBody').off('click','.btn-grid-delete').on('click','.btn-grid-delete', function() {
+            var id = parseInt($(this).data('id'));
+            var $row = $(this).closest('tr');
+            if (id === 0) { $row.remove(); return; }
+            if (!confirmDelete('Delete this book type?')) return;
+            $.post('/BookTypes/Delete', JSON.stringify(id), function(res) {
+                if (res.success) { $row.fadeOut(200, function(){ $(this).remove(); }); showToast('Book type deleted.'); }
+                else showToast(res.message,'error');
+            }, 'json');
+        });
+    }
+
+    $('#btnSave').click(function() {
+        var payload = [];
+        $('#gridBody tr[data-dirty="true"]').each(function() {
+            var name = $(this).find('.col-name').val().trim();
+            if (!name) return;
+            payload.push({
+                bookTypeId:    parseInt($(this).attr('data-id'))||0,
+                typeName:      name,
+                linkedAccount: parseInt($(this).find('.col-link').val()),
+                isActive:      $(this).find('.col-active').is(':checked')
+            });
+        });
+        if (!payload.length) { showToast('No changes to save.', 'info'); return; }
+        $.ajax({ url:'/BookTypes/SaveAll', type:'POST', contentType:'application/json',
+            data: JSON.stringify(payload),
+            success: function(res) {
+                if (res.success) { showToast('Book types saved.'); loadGrid(); }
+                else showToast(res.message,'error');
+            }
+        });
+    });
+
+    $('#btnAddRow').click(function() {
+        $('#gridBody').append(blankRow());
+        bindEvents();
+        $('#gridBody tr:last-child .col-name').focus();
+    });
+
+    loadGrid();
+</script>
+}

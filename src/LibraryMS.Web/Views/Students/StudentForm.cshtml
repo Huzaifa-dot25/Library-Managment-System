@@ -1,0 +1,125 @@
+@model LibraryMS.Application.ViewModels.StudentViewModel
+@{
+    bool isEdit = Model.StudentId > 0;
+    ViewData["Title"] = isEdit ? "Edit Student" : "Add Student";
+}
+
+<div class="lms-page-header">
+    <div>
+        <h4><i class="bi bi-person-plus-fill"></i> @ViewData["Title"]</h4>
+        <div class="header-subtitle">@(isEdit ? "Update student record." : "Register a new student member.")</div>
+    </div>
+    <a asp-action="Index" class="btn-lms-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger alert-dismissible d-flex gap-2 mb-3">
+        <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+        <div>@foreach (var e in ViewData.ModelState.Values.SelectMany(v => v.Errors)) { <div>@e.ErrorMessage</div> }</div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<form asp-action="Save" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="StudentId" />
+
+    <div class="lms-card p-4">
+        <div class="row g-3">
+
+            <!-- Name -->
+            <div class="col-md-4">
+                <label class="form-label">Full Name <span class="text-danger">*</span></label>
+                <input asp-for="Name" class="form-control" placeholder="Student full name..." />
+                <span asp-validation-for="Name" class="text-danger small"></span>
+            </div>
+
+            <!-- Registration No -->
+            <div class="col-md-3">
+                <label class="form-label">Registration No</label>
+                <input asp-for="RegistrationNo" class="form-control" placeholder="e.g. ACEBT001232025" />
+            </div>
+
+            <!-- Roll No -->
+            <div class="col-md-2">
+                <label class="form-label">Roll No</label>
+                <input asp-for="RollNo" class="form-control" placeholder="Roll no..." />
+            </div>
+
+            <!-- Active -->
+            <div class="col-md-3 d-flex align-items-end">
+                <div class="form-check form-switch">
+                    <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                    <label class="form-check-label form-label mb-0">Active Student</label>
+                </div>
+            </div>
+
+            <!-- Session -->
+            <div class="col-md-4">
+                <label class="form-label">Session (Academic Year)</label>
+                <select asp-for="SessionId" class="form-select">
+                    <option value="">-- select session --</option>
+                    @foreach (var s in Model.Sessions)
+                    {
+                        <option value="@s.SessionId">@s.SessionName</option>
+                    }
+                </select>
+            </div>
+
+            <!-- Class -->
+            <div class="col-md-4">
+                <label class="form-label">Class Level</label>
+                <select asp-for="ClassLevelId" class="form-select" id="classSelect">
+                    <option value="">-- select class --</option>
+                    @foreach (var c in Model.ClassLevels)
+                    {
+                        <option value="@c.ClassLevelId">@c.Name</option>
+                    }
+                </select>
+            </div>
+
+            <!-- Section -->
+            <div class="col-md-4">
+                <label class="form-label">Section</label>
+                <select asp-for="SectionId" class="form-select" id="sectionSelect">
+                    <option value="">-- select section --</option>
+                    @foreach (var s in Model.Sections)
+                    {
+                        <option value="@s.SectionId">@s.Name</option>
+                    }
+                </select>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="lms-action-bar mt-3" style="border-radius:var(--radius-md)">
+        <button type="submit" class="btn-lms-primary">
+            <i class="bi bi-save-fill"></i> @(isEdit ? "Update Student" : "Save Student")
+        </button>
+        <a asp-action="Index" class="btn-lms-secondary"><i class="bi bi-x-lg"></i> Cancel</a>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+    // Cascade class → sections
+    var currentSectionId = @(Model.SectionId.HasValue ? Model.SectionId.Value.ToString() : "0");
+
+    $('#classSelect').on('change', function() {
+        var cid = $(this).val();
+        var $sec = $('#sectionSelect').html('<option value="">-- select section --</option>');
+        if (!cid) return;
+        $.get('/Students/GetSections', { classLevelId: cid }, function(data) {
+            data.forEach(function(s) {
+                var sel = s.sectionId === currentSectionId ? ' selected' : '';
+                $sec.append('<option value="' + s.sectionId + '"' + sel + '>' + s.name + '</option>');
+            });
+        });
+    });
+
+    // Trigger on load for edit
+    if ($('#classSelect').val()) $('#classSelect').trigger('change');
+</script>
+}

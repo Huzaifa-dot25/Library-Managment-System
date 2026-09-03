@@ -1,0 +1,84 @@
+@{ ViewData["Title"] = "Manage Sections"; }
+
+<div class="lms-page-header">
+    <div>
+        <h4><i class="bi bi-collection"></i> Manage Sections</h4>
+        <div class="header-subtitle">Sections within each class level, e.g. Blue, Red, Green.</div>
+    </div>
+    <button class="btn-lms-outline" id="btnAddRow"><i class="bi bi-plus-lg"></i> Add Row</button>
+</div>
+
+<div class="lms-card p-3 mb-3">
+    <div class="d-flex align-items-center gap-3">
+        <label class="form-label mb-0 fw-semibold">Filter by Class:</label>
+        <select class="form-select form-select-sm" style="max-width:260px" id="filterClass">
+            <option value="">All Classes</option>
+        </select>
+    </div>
+</div>
+
+<div class="lms-grid-wrapper">
+    <div class="lms-grid-scroll">
+        <table class="lms-table">
+            <thead><tr>
+                <th style="width:40%">Class Level</th>
+                <th style="width:50%">Section Name</th>
+                <th style="width:5%;text-align:center">Delete</th>
+            </tr></thead>
+            <tbody id="gridBody"><tr><td colspan="3" class="text-center py-4 text-muted">Loading...</td></tr></tbody>
+        </table>
+    </div>
+    <div class="lms-action-bar">
+        <button class="btn-lms-success" id="btnSaveAll"><i class="bi bi-save2"></i> Save All</button>
+        <button class="btn-lms-secondary" onclick="window.location='/'"><i class="bi bi-x-lg"></i> Close</button>
+    </div>
+</div>
+
+@section Scripts {<script>
+var classLevels=[];
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function classSelect(val){
+    return '<select class="grid-input col-class">'+classLevels.map(function(c){
+        return '<option value="'+c.classLevelId+'"'+(c.classLevelId===val?' selected':'')+'>'+esc(c.name)+'</option>';
+    }).join('')+'</select>';}
+function renderRow(s){
+    return '<tr data-id="'+s.sectionId+'" data-dirty="false">'+
+    '<td>'+classSelect(s.classLevelId)+'</td>'+
+    '<td><input class="grid-input col-name" value="'+esc(s.name)+'" placeholder="Section name..." /></td>'+
+    '<td class="text-center"><button class="btn-grid-delete" data-id="'+s.sectionId+'"><i class="bi bi-trash3"></i></button></td></tr>';}
+function blankRow(){return classLevels.length?renderRow({sectionId:0,classLevelId:classLevels[0].classLevelId,name:''}):'<tr><td colspan="3" class="text-muted-sm text-center">Add class levels first.</td></tr>';}
+function loadGrid(){
+    var cid=$('#filterClass').val()||null;
+    $.get('/Lookup/GetSections',cid?{classLevelId:cid}:{},function(d){
+        $('#gridBody').html(d.map(renderRow).join('')+blankRow());bindEvents();
+    });}
+function bindEvents(){
+    $('#gridBody').off('input change').on('input change','input,select',function(){
+        var $r=$(this).closest('tr').attr('data-dirty','true').addClass('row-dirty');
+        if($r.is(':last-child')&&$r.attr('data-id')==='0'){$('#gridBody').append(blankRow());bindEvents();}
+    });
+    $('#gridBody').off('click','.btn-grid-delete').on('click','.btn-grid-delete',function(){
+        var id=parseInt($(this).data('id'));var $r=$(this).closest('tr');
+        if(id===0){$r.remove();return;}if(!confirmDelete('Delete section?'))return;
+        $.post('/Lookup/DeleteSection',JSON.stringify(id),function(r){if(r.success){$r.fadeOut(200,function(){$(this).remove();});showToast('Deleted.');}else showToast(r.message,'error');},'json');
+    });}
+$('#btnSaveAll').click(async function(){
+    var rows=$('#gridBody tr[data-dirty="true"]');if(!rows.length){showToast('No changes.','info');return;}
+    var saved=0;
+    for(var i=0;i<rows.length;i++){
+        var $r=$(rows[i]);var n=$r.find('.col-name').val().trim();if(!n)continue;
+        var p={sectionId:parseInt($r.attr('data-id'))||0,classLevelId:parseInt($r.find('.col-class').val()),name:n};
+        await $.ajax({url:'/Lookup/SaveSection',type:'POST',contentType:'application/json',data:JSON.stringify(p)});saved++;
+    }
+    if(saved)showToast(saved+' section(s) saved.');loadGrid();
+});
+$('#filterClass').on('change',loadGrid);
+$('#btnAddRow').click(function(){$('#gridBody').append(blankRow());bindEvents();$('#gridBody tr:last-child .col-name').focus();});
+// Load class levels for dropdowns
+$.get('/Lookup/GetClassLevels',function(d){
+    classLevels=d;
+    d.forEach(function(c){$('#filterClass').append('<option value="'+c.classLevelId+'">'+esc(c.name)+'</option>');});
+    loadGrid();
+});
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+</script>}

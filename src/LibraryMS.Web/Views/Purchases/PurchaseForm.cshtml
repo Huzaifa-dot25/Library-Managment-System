@@ -1,0 +1,498 @@
+@model LibraryMS.Application.ViewModels.PurchaseFormViewModel
+@using LibraryMS.Domain.Enums
+@{
+    bool isEdit = Model.PurchaseId > 0;
+    ViewData["Title"] = isEdit ? "Edit Purchase" : "New Purchase Order / Invoice";
+}
+
+<div class="lms-page-header">
+    <div>
+        <h4><i class="bi bi-receipt-cutoff"></i> @ViewData["Title"]</h4>
+        <div class="header-subtitle">Enter purchase details and add items below.</div>
+    </div>
+    <a asp-action="Index" class="btn-lms-secondary">
+        <i class="bi bi-arrow-left"></i> Back to History
+    </a>
+</div>
+
+<div class="row g-3">
+
+    <!-- ══ Left: Header Panel ════════════════════════════════════ -->
+    <div class="col-lg-3">
+        <div class="lms-card p-3 h-100">
+            <div class="fw-bold mb-3" style="color:var(--lms-primary-dark);font-size:.85rem;text-transform:uppercase;letter-spacing:.05em">
+                <i class="bi bi-card-list me-2"></i>Purchase Header
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Invoice / Order</label>
+                <select class="form-select form-select-sm" id="hdrType">
+                    <option value="0">Invoice</option>
+                    <option value="1">Order</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Purchase #</label>
+                <input type="text" class="form-control form-control-sm bg-light" id="hdrPurchaseNo"
+                       value="@Model.PurchaseNumber" readonly />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Vendor / Supplier</label>
+                <div class="input-group input-group-sm">
+                    <select class="form-select" id="hdrVendor">
+                        <option value="">-- select --</option>
+                    @foreach (var v in Model.Vendors)
+                    {
+                        if (Model.VendorId == v.VendorId)
+                        {
+                            <option value="@v.VendorId" selected="selected">@v.Name</option>
+                        }
+                        else
+                        {
+                            <option value="@v.VendorId">@v.Name</option>
+                        }
+                    }
+                    </select>
+                    <button type="button" class="btn btn-outline-primary" id="btnAddVendor" title="Quick-add vendor">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Purchase Date</label>
+                <input type="date" class="form-control form-control-sm" id="hdrDate"
+                       value="@Model.PurchaseDate.ToString("yyyy-MM-dd")" />
+            </div>
+
+            <div class="mb-3">
+                <div class="form-check form-switch mb-1">
+                    <input class="form-check-input" type="checkbox" id="hdrManualEnabled"
+                           @(Model.ManualNumberEnabled ? "checked" : "") />
+                    <label class="form-check-label form-label mb-0">Manual Purchase #</label>
+                </div>
+                <input type="text" class="form-control form-control-sm" id="hdrManualNo"
+                       value="@Model.ManualPurchaseNumber"
+                       placeholder="Manual reference..."
+                       @(Model.ManualNumberEnabled ? "" : "disabled") />
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ Right: Items + Grid ════════════════════════════════════ -->
+    <div class="col-lg-9">
+
+        <!-- Item Entry Row -->
+        <div class="lms-card p-3 mb-3">
+            <div class="fw-bold mb-2" style="color:var(--lms-primary-dark);font-size:.85rem;text-transform:uppercase;letter-spacing:.05em">
+                <i class="bi bi-plus-circle me-2"></i>Add Item
+            </div>
+            <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Item (Book Title / Free Text)</label>
+                    <div class="position-relative">
+                        <input type="text" class="form-control form-control-sm" id="itemSearch"
+                               placeholder="Type to search books..." autocomplete="off" />
+                        <div id="itemSuggestions" class="suggestions-dropdown" style="display:none"></div>
+                    </div>
+                    <input type="hidden" id="itemBookId" value="" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Serial No</label>
+                    <input type="text" class="form-control form-control-sm" id="itemSerial" placeholder="Serial..." />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Qty</label>
+                    <input type="number" class="form-control form-control-sm" id="itemQty" value="1" min="1" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Price / Unit</label>
+                    <input type="number" class="form-control form-control-sm" id="itemPrice" value="0" min="0" step="0.01" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Disc %</label>
+                    <input type="number" class="form-control form-control-sm" id="itemDisc" value="0" min="0" max="100" step="0.01" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Net Price</label>
+                    <input type="text" class="form-control form-control-sm bg-light" id="itemNet" readonly value="0.00" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="button" class="btn btn-primary btn-sm w-100" id="btnAddItem">
+                        <i class="bi bi-plus-lg"></i> Add
+                    </button>
+                </div>
+            </div>
+            <div class="mt-2">
+                <small class="text-muted-sm">
+                    <i class="bi bi-box-seam me-1"></i>Existing Stock:
+                    <strong id="existingStock">0</strong>
+                </small>
+            </div>
+        </div>
+
+        <!-- Items Grid -->
+        <div class="lms-grid-wrapper mb-3">
+            <div style="max-height:300px;overflow-y:auto">
+                <table class="lms-table" id="itemsTable">
+                    <thead>
+                        <tr>
+                            <th style="width:35%">Product</th>
+                            <th style="width:12%">Serial No</th>
+                            <th style="width:8%;text-align:center">Qty</th>
+                            <th style="width:12%;text-align:right">Price/Unit</th>
+                            <th style="width:8%;text-align:center">Disc%</th>
+                            <th style="width:12%;text-align:right">Net Price</th>
+                            <th style="width:5%;text-align:center">Del</th>
+                        </tr>
+                    </thead>
+                    <tbody id="itemsBody">
+                        <tr id="emptyRow"><td colspan="7" class="text-center text-muted py-3">
+                            <i class="bi bi-inbox me-2"></i>No items added yet.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Footer: Subject + Totals -->
+        <div class="lms-card p-3">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label">Subject / Notes</label>
+                    <textarea class="form-control form-control-sm" id="hdrSubject" rows="2"
+                              placeholder="Optional subject or notes...">@Model.Subject</textarea>
+                </div>
+                <div class="col-md-7">
+                    <div class="row g-2">
+                        <div class="col-4">
+                            <label class="form-label">Total Amount</label>
+                            <input type="text" class="form-control form-control-sm bg-light fw-bold text-end"
+                                   id="footerTotal" readonly value="@Model.TotalAmount.ToString("F2")" />
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label">Overall Discount</label>
+                            <input type="number" class="form-control form-control-sm text-end"
+                                   id="footerDiscount" value="@Model.OverallDiscount.ToString("F2")" min="0" step="0.01" />
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label">Net Amount</label>
+                            <input type="text" class="form-control form-control-sm bg-light fw-bold text-end text-success"
+                                   id="footerNet" readonly value="@Model.NetAmount.ToString("F2")" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /col-lg-9 -->
+</div><!-- /row -->
+
+<!-- ── Action Bar ────────────────────────────────────────────── -->
+<div class="lms-action-bar mt-3" style="border-radius:var(--radius-md)">
+    <button type="button" class="btn-lms-primary" id="btnSave">
+        <i class="bi bi-save-fill"></i> Save
+    </button>
+    <button type="button" class="btn-lms-secondary" id="btnNew">
+        <i class="bi bi-file-earmark-plus"></i> New
+    </button>
+    <button type="button" class="btn-lms-secondary" id="btnPrint" title="TODO: PDF export">
+        <i class="bi bi-printer"></i> Print
+    </button>
+    <a asp-action="Index" class="btn-lms-secondary">
+        <i class="bi bi-x-lg"></i> Close
+    </a>
+    <span class="ms-auto text-muted-sm" id="saveStatus"></span>
+</div>
+
+<!-- Quick-add Vendor Modal -->
+<div class="modal fade" id="vendorQuickModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:400px">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:12px;overflow:hidden">
+            <div class="modal-header border-0 text-white" style="background:linear-gradient(135deg,#1e3a8a,#1e40af)">
+                <h6 class="modal-title fw-bold mb-0"><i class="bi bi-shop me-2"></i>Quick Add Vendor</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <label class="form-label">Vendor Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="quickVendorName" placeholder="Vendor name..." />
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button class="btn-lms-primary" id="btnSaveQuickVendor"><i class="bi bi-save2"></i> Add</button>
+                <button class="btn-lms-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // ── State ────────────────────────────────────────────────────
+    var purchaseId  = @Model.PurchaseId;
+    var items       = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Items));
+    var itemRowIdx  = 0;
+
+    // ── Set initial type from server ─────────────────────────────
+    $('#hdrType').val(@((int)Model.InvoiceOrOrder));
+
+    // ── Manual # toggle ──────────────────────────────────────────
+    $('#hdrManualEnabled').on('change', function() {
+        $('#hdrManualNo').prop('disabled', !this.checked);
+        if (!this.checked) $('#hdrManualNo').val('');
+    });
+
+    // ── Live net price calculation ────────────────────────────────
+    function calcNet(qty, price, disc) {
+        return Math.max(0, qty * price * (1 - disc / 100));
+    }
+
+    $('#itemQty, #itemPrice, #itemDisc').on('input', function() {
+        var net = calcNet(
+            parseFloat($('#itemQty').val())   || 0,
+            parseFloat($('#itemPrice').val()) || 0,
+            parseFloat($('#itemDisc').val())  || 0
+        );
+        $('#itemNet').val(net.toFixed(2));
+    });
+
+    // ── Overall discount → recalc net amount ─────────────────────
+    $('#footerDiscount').on('input', recalcTotals);
+
+    function recalcTotals() {
+        var total = 0;
+        $('.item-net-val').each(function() { total += parseFloat($(this).text()) || 0; });
+        var disc = parseFloat($('#footerDiscount').val()) || 0;
+        var net  = Math.max(0, total - disc);
+        $('#footerTotal').val(total.toFixed(2));
+        $('#footerNet').val(net.toFixed(2));
+    }
+
+    // ── Book search autocomplete ─────────────────────────────────
+    var searchTimer;
+    $('#itemSearch').on('input', function() {
+        clearTimeout(searchTimer);
+        var kw = $(this).val().trim();
+        if (kw.length < 2) { $('#itemSuggestions').hide(); return; }
+        searchTimer = setTimeout(function() {
+            $.get('/Purchases/SearchBooks', { keyword: kw }, function(res) {
+                var $s = $('#itemSuggestions').empty();
+                if (!res.length) { $s.hide(); return; }
+                res.forEach(function(b) {
+                    $s.append(
+                        '<div class="suggestion-item" data-id="' + b.bookId + '" data-title="' + $('<span>').text(b.title).html() + '" data-stock="' + b.remainingQuantity + '">' +
+                        '<strong>' + $('<span>').text(b.title).html() + '</strong>' +
+                        '<small class="text-muted ms-2">' + (b.isbn || '') + '</small>' +
+                        '<span class="float-end lms-badge lms-badge-info">' + b.remainingQuantity + ' in stock</span>' +
+                        '</div>'
+                    );
+                });
+                $s.show();
+            });
+        }, 280);
+    });
+
+    $(document).on('click', '.suggestion-item', function() {
+        $('#itemBookId').val($(this).data('id'));
+        $('#itemSearch').val($(this).data('title'));
+        $('#existingStock').text($(this).data('stock'));
+        $('#itemSuggestions').hide();
+    });
+
+    // Fetch stock when book ID set manually
+    $('#itemBookId').on('change', function() {
+        var id = parseInt($(this).val());
+        if (!id) return;
+        $.get('/Purchases/GetBookStock', { bookId: id }, function(res) {
+            $('#existingStock').text(res.stock);
+        });
+    });
+
+    // Hide suggestions on outside click
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('#itemSearch, #itemSuggestions').length)
+            $('#itemSuggestions').hide();
+    });
+
+    // ── Add item to grid ─────────────────────────────────────────
+    $('#btnAddItem').click(function() {
+        var bookId = $('#itemBookId').val() || null;
+        var name   = $('#itemSearch').val().trim();
+        if (!name) { showToast('Enter an item name or select a book.', 'info'); $('#itemSearch').focus(); return; }
+
+        var qty   = parseInt($('#itemQty').val())   || 1;
+        var price = parseFloat($('#itemPrice').val()) || 0;
+        var disc  = parseFloat($('#itemDisc').val())  || 0;
+        var net   = calcNet(qty, price, disc);
+        var idx   = itemRowIdx++;
+
+        $('#emptyRow').remove();
+        $('#itemsBody').append(
+            '<tr data-idx="' + idx + '">' +
+            '<td><strong>' + $('<div>').text(name).html() + '</strong>' +
+                (bookId ? '<br><small class="text-muted-sm">BookId: ' + bookId + '</small>' : '') +
+                '<input type="hidden" class="item-book-id" value="' + (bookId || '') + '" />' +
+                '<input type="hidden" class="item-name-val" value="' + $('<div>').text(name).html() + '" />' +
+            '</td>' +
+            '<td>' +
+                '<input type="text" class="grid-input item-serial-val" value="' + $('<div>').text($('#itemSerial').val()).html() + '" style="width:100%" />' +
+            '</td>' +
+            '<td class="text-center">' +
+                '<input type="number" class="grid-input item-qty-val text-center" value="' + qty + '" min="1" style="width:60px" />' +
+            '</td>' +
+            '<td class="text-end">' +
+                '<input type="number" class="grid-input item-price-val text-end" value="' + price.toFixed(2) + '" min="0" step="0.01" style="width:80px" />' +
+            '</td>' +
+            '<td class="text-center">' +
+                '<input type="number" class="grid-input item-disc-val text-center" value="' + disc.toFixed(2) + '" min="0" max="100" step="0.01" style="width:55px" />' +
+            '</td>' +
+            '<td class="text-end"><span class="item-net-val">' + net.toFixed(2) + '</span>' +
+                '<input type="hidden" class="item-net-hidden" value="' + net.toFixed(2) + '" />' +
+            '</td>' +
+            '<td class="text-center">' +
+                '<button type="button" class="btn-grid-delete btn-del-item"><i class="bi bi-trash3"></i></button>' +
+            '</td>' +
+            '</tr>'
+        );
+
+        // Reset entry row
+        $('#itemSearch').val(''); $('#itemBookId').val('');
+        $('#itemSerial').val(''); $('#itemQty').val(1);
+        $('#itemPrice').val(0);   $('#itemDisc').val(0);
+        $('#itemNet').val('0.00'); $('#existingStock').text(0);
+        recalcTotals();
+        $('#itemSearch').focus();
+    });
+
+    // Live row recalc
+    $(document).on('input', '.item-qty-val, .item-price-val, .item-disc-val', function() {
+        var $row  = $(this).closest('tr');
+        var qty   = parseFloat($row.find('.item-qty-val').val())   || 0;
+        var price = parseFloat($row.find('.item-price-val').val()) || 0;
+        var disc  = parseFloat($row.find('.item-disc-val').val())  || 0;
+        var net   = calcNet(qty, price, disc);
+        $row.find('.item-net-val').text(net.toFixed(2));
+        $row.find('.item-net-hidden').val(net.toFixed(2));
+        recalcTotals();
+    });
+
+    // Remove row
+    $(document).on('click', '.btn-del-item', function() {
+        $(this).closest('tr').remove();
+        if ($('#itemsBody tr').length === 0)
+            $('#itemsBody').append('<tr id="emptyRow"><td colspan="7" class="text-center text-muted py-3"><i class="bi bi-inbox me-2"></i>No items added yet.</td></tr>');
+        recalcTotals();
+    });
+
+    // ── Load existing items (edit mode) ──────────────────────────
+    if (items && items.length) {
+        items.forEach(function(item) {
+            $('#itemBookId').val(item.bookId || '');
+            $('#itemSearch').val(item.itemName || '');
+            $('#itemSerial').val(item.serialNo || '');
+            $('#itemQty').val(item.quantity);
+            $('#itemPrice').val(item.pricePerUnit);
+            $('#itemDisc').val(item.discountPercent);
+            $('#itemNet').val(item.netPrice.toFixed(2));
+            $('#btnAddItem').click();
+        });
+        $('#itemSearch').val(''); $('#itemBookId').val('');
+        $('#itemSerial').val(''); $('#itemQty').val(1);
+        $('#itemPrice').val(0); $('#itemDisc').val(0);
+        $('#itemNet').val('0.00');
+    }
+
+    // ── Collect payload ──────────────────────────────────────────
+    function collectPayload() {
+        var rows = [];
+        $('#itemsBody tr:not(#emptyRow)').each(function() {
+            var bookId = $(this).find('.item-book-id').val();
+            rows.push({
+                bookId:          bookId ? parseInt(bookId) : null,
+                itemName:        $(this).find('.item-name-val').val(),
+                serialNo:        $(this).find('.item-serial-val').val() || null,
+                quantity:        parseInt($(this).find('.item-qty-val').val()) || 1,
+                pricePerUnit:    parseFloat($(this).find('.item-price-val').val()) || 0,
+                discountPercent: parseFloat($(this).find('.item-disc-val').val()) || 0,
+                netPrice:        parseFloat($(this).find('.item-net-hidden').val()) || 0
+            });
+        });
+        return {
+            purchaseId:           purchaseId,
+            purchaseNumber:       $('#hdrPurchaseNo').val(),
+            invoiceOrOrder:       parseInt($('#hdrType').val()),
+            vendorId:             parseInt($('#hdrVendor').val()) || null,
+            purchaseDate:         $('#hdrDate').val(),
+            manualNumberEnabled:  $('#hdrManualEnabled').is(':checked'),
+            manualPurchaseNumber: $('#hdrManualNo').val() || null,
+            subject:              $('#hdrSubject').val() || null,
+            totalAmount:          parseFloat($('#footerTotal').val()) || 0,
+            overallDiscount:      parseFloat($('#footerDiscount').val()) || 0,
+            netAmount:            parseFloat($('#footerNet').val()) || 0,
+            items:                rows
+        };
+    }
+
+    // ── Save ─────────────────────────────────────────────────────
+    $('#btnSave').click(function() {
+        var payload = collectPayload();
+        if (!payload.items.length) { showToast('Add at least one item before saving.', 'info'); return; }
+
+        var $btn = $(this).prop('disabled', true).html('<i class="bi bi-hourglass-split me-1"></i>Saving...');
+        $('#saveStatus').html('<i class="bi bi-hourglass-split me-1"></i>Saving...');
+
+        $.ajax({
+            url: '/Purchases/Save', type: 'POST', contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function(res) {
+                $btn.prop('disabled', false).html('<i class="bi bi-save-fill me-1"></i>Save');
+                if (res.success) {
+                    purchaseId = res.purchaseId;
+                    showToast('Purchase saved successfully.');
+                    $('#saveStatus').html('<i class="bi bi-check-circle-fill text-success me-1"></i>Saved — Purchase #' + $('#hdrPurchaseNo').val());
+                } else {
+                    showToast(res.message, 'error');
+                    $('#saveStatus').text('');
+                }
+            },
+            error: function() {
+                $btn.prop('disabled', false).html('<i class="bi bi-save-fill me-1"></i>Save');
+                showToast('Connection error. Please try again.', 'error');
+                $('#saveStatus').text('');
+            }
+        });
+    });
+
+    // ── New ──────────────────────────────────────────────────────
+    $('#btnNew').click(function() {
+        if (!confirm('Start a new purchase? Unsaved changes will be lost.')) return;
+        window.location.href = '/Purchases/Create';
+    });
+
+    // ── Print placeholder ─────────────────────────────────────────
+    $('#btnPrint').click(function() {
+        showToast('PDF/Print export coming in a later phase.', 'info');
+    });
+
+    // ── Quick-add vendor ─────────────────────────────────────────
+    var vendorModal = new bootstrap.Modal(document.getElementById('vendorQuickModal'));
+    $('#btnAddVendor').click(function() { $('#quickVendorName').val(''); vendorModal.show(); setTimeout(function(){ $('#quickVendorName').focus(); }, 300); });
+    $('#btnSaveQuickVendor').click(function() {
+        var name = $('#quickVendorName').val().trim();
+        if (!name) return;
+        $.ajax({ url:'/Purchases/QuickAddVendor', type:'POST', contentType:'application/json', data: JSON.stringify(name),
+            success: function(res) {
+                if (res.success) {
+                    $('#hdrVendor').append('<option value="' + res.data.vendorId + '" selected>' + res.data.name + '</option>');
+                    vendorModal.hide();
+                    showToast('Vendor added.');
+                }
+            }
+        });
+    });
+    $('#quickVendorName').on('keypress', function(e) { if (e.which === 13) $('#btnSaveQuickVendor').click(); });
+
+    recalcTotals();
+</script>
+}

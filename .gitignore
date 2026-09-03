@@ -1,0 +1,17 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+## EF Core migrations snapshot (keep migrations, ignore backup)
+*.bak
+
+## Uploaded files (don't commit user uploads)
+src/LibraryMS.Web/wwwroot/uploads/books/*
+!src/LibraryMS.Web/wwwroot/uploads/books/.gitkeep
+
+## Secrets
+appsettings.Development.json
+secrets.json

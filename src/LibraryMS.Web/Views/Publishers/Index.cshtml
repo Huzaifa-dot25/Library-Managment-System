@@ -1,0 +1,181 @@
+@{
+    ViewData["Title"] = "Manage Publishers";
+}
+
+<div class="lms-page-header">
+    <div>
+        <h4><i class="bi bi-building"></i> Manage Publishers</h4>
+        <div class="header-subtitle">Add, edit or remove publishers. Changes save per row.</div>
+    </div>
+    <button class="btn-lms-outline" id="btnAddRow">
+        <i class="bi bi-plus-lg"></i> Add Row
+    </button>
+</div>
+
+<div class="lms-grid-wrapper">
+    <div class="lms-grid-scroll">
+        <table class="lms-table">
+            <thead>
+                <tr>
+                    <th style="min-width:160px">Name</th>
+                    <th style="min-width:150px">Email</th>
+                    <th style="width:110px">Phone No</th>
+                    <th style="min-width:180px">Address</th>
+                    <th style="width:100px">Gender</th>
+                    <th style="width:120px">Country</th>
+                    <th style="width:100px">City</th>
+                    <th style="width:60px;text-align:center">Delete</th>
+                </tr>
+            </thead>
+            <tbody id="gridBody">
+                <tr><td colspan="8" class="text-center py-4 text-muted">
+                    <i class="bi bi-hourglass-split me-2"></i>Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="lms-action-bar">
+        <button class="btn-lms-primary" id="btnSaveClose">
+            <i class="bi bi-save-fill"></i> Save &amp; Close
+        </button>
+        <button class="btn-lms-success" id="btnSave">
+            <i class="bi bi-save2"></i> Save
+        </button>
+        <button class="btn-lms-secondary" onclick="window.location='/'">
+            <i class="bi bi-x-lg"></i> Close
+        </button>
+        <span class="ms-auto text-muted-sm" id="statusMsg"></span>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const genderOpts  = ['', 'Male', 'Female', 'Other'];
+    const countryOpts = ['', 'Pakistan', 'United Kingdom', 'United States', 'India',
+        'Canada', 'Australia', 'UAE', 'Saudi Arabia', 'Other'];
+
+    function esc(s) {
+        return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function sel(opts, val, cls) {
+        return '<select class="grid-input ' + cls + '">' +
+            opts.map(function(o) {
+                return '<option value="' + o + '"' + (o===(val||'')?' selected':'') + '>' + (o||'-- select --') + '</option>';
+            }).join('') + '</select>';
+    }
+
+    function inp(val, cls, ph) {
+        return '<input type="text" class="grid-input ' + cls + '" value="' + esc(val) + '" placeholder="' + ph + '" />';
+    }
+
+    function renderRow(p) {
+        return '<tr data-id="' + p.publisherId + '" data-dirty="false">' +
+            '<td>' + inp(p.name,    'col-name',    'Publisher name') + '</td>' +
+            '<td>' + inp(p.email,   'col-email',   'email@domain.com') + '</td>' +
+            '<td>' + inp(p.phoneNo, 'col-phone',   'phone no') + '</td>' +
+            '<td>' + inp(p.address, 'col-address', 'address') + '</td>' +
+            '<td>' + sel(genderOpts,  p.gender,  'col-gender')  + '</td>' +
+            '<td>' + sel(countryOpts, p.country, 'col-country') + '</td>' +
+            '<td>' + inp(p.city,    'col-city',    'city') + '</td>' +
+            '<td class="text-center">' +
+                '<button class="btn-grid-delete btn-del" data-id="' + p.publisherId + '" title="Delete">' +
+                    '<i class="bi bi-trash3"></i>' +
+                '</button>' +
+            '</td></tr>';
+    }
+
+    function blankRow() {
+        return renderRow({ publisherId:0, name:'', email:'', phoneNo:'', address:'', gender:'', country:'', city:'' });
+    }
+
+    function loadGrid() {
+        $.get('/Publishers/GetAll', function(data) {
+            $('#gridBody').html(data.map(renderRow).join('') + blankRow());
+            bindEvents();
+        });
+    }
+
+    function bindEvents() {
+        $('#gridBody').off('input change').on('input change', 'input,select', function() {
+            var $row = $(this).closest('tr').attr('data-dirty','true').addClass('row-dirty');
+            if ($row.is(':last-child') && $row.attr('data-id') === '0') {
+                $('#gridBody').append(blankRow());
+                bindEvents();
+            }
+        });
+
+        $('#gridBody').off('click','.btn-del').on('click','.btn-del', function() {
+            var id   = parseInt($(this).data('id'));
+            var $row = $(this).closest('tr');
+            if (id === 0) { $row.remove(); return; }
+            if (!confirmDelete('Delete this publisher?')) return;
+            $(this).html('<i class="bi bi-hourglass-split"></i>');
+            $.post('/Publishers/Delete', JSON.stringify(id), function(res) {
+                if (res.success) { $row.fadeOut(200, function(){ $(this).remove(); }); showToast('Publisher deleted.'); }
+                else showToast(res.message, 'error');
+            }, 'json');
+        });
+
+        // Highlight selected row
+        $('#gridBody').off('click','tr').on('click','tr', function(e) {
+            if ($(e.target).closest('button,input,select').length) return;
+            $('#gridBody tr').removeClass('row-selected');
+            $(this).addClass('row-selected');
+        });
+    }
+
+    function collectDirty() {
+        var payload = [];
+        $('#gridBody tr[data-dirty="true"]').each(function() {
+            var name = $(this).find('.col-name').val().trim();
+            if (!name) return;
+            payload.push({
+                publisherId: parseInt($(this).attr('data-id')) || 0,
+                name:    name,
+                email:   $(this).find('.col-email').val()   || null,
+                phoneNo: $(this).find('.col-phone').val()   || null,
+                address: $(this).find('.col-address').val() || null,
+                gender:  $(this).find('.col-gender').val()  || null,
+                country: $(this).find('.col-country').val() || null,
+                city:    $(this).find('.col-city').val()    || null
+            });
+        });
+        return payload;
+    }
+
+    function doSave(andClose) {
+        var payload = collectDirty();
+        if (!payload.length) {
+            showToast('No unsaved changes.', 'info');
+            if (andClose) window.location = '/';
+            return;
+        }
+        $('#statusMsg').html('<i class="bi bi-hourglass-split me-1"></i>Saving...');
+        $.ajax({
+            url: '/Publishers/SaveAll', type: 'POST', contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function(res) {
+                $('#statusMsg').text('');
+                if (res.success) {
+                    showToast('Publishers saved successfully.');
+                    if (andClose) window.location = '/';
+                    else loadGrid();
+                } else {
+                    showToast(res.message, 'error');
+                }
+            }
+        });
+    }
+
+    $('#btnSave').click(function()      { doSave(false); });
+    $('#btnSaveClose').click(function() { doSave(true);  });
+    $('#btnAddRow').click(function() {
+        $('#gridBody').append(blankRow());
+        bindEvents();
+        $('#gridBody tr:last-child .col-name').focus();
+    });
+
+    loadGrid();
+</script>
+}

@@ -1,0 +1,64 @@
+@model LibraryMS.Application.ViewModels.EmployeeViewModel
+@{
+    bool isEdit = Model.EmployeeId > 0;
+    ViewData["Title"] = isEdit ? "Edit Employee" : "Add Employee";
+}
+
+<div class="lms-page-header">
+    <div>
+        <h4><i class="bi bi-person-badge-fill"></i> @ViewData["Title"]</h4>
+        <div class="header-subtitle">@(isEdit ? "Update employee details." : "Register a new employee as a library member.")</div>
+    </div>
+    <a asp-action="Index" class="btn-lms-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger alert-dismissible d-flex gap-2 mb-3">
+        <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+        <div>@foreach (var e in ViewData.ModelState.Values.SelectMany(v => v.Errors)) { <div>@e.ErrorMessage</div> }</div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<form asp-action="Save" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="EmployeeId" />
+
+    <div class="lms-card p-4">
+        <div class="row g-3">
+
+            <div class="col-md-5">
+                <label class="form-label">Full Name <span class="text-danger">*</span></label>
+                <input asp-for="Name" class="form-control" placeholder="Employee full name..." />
+                <span asp-validation-for="Name" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Employee Code</label>
+                <input asp-for="EmployeeCode" class="form-control" placeholder="e.g. AE-15-0048" />
+                <span asp-validation-for="EmployeeCode" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Department</label>
+                <input asp-for="Department" class="form-control" placeholder="e.g. Science, Admin..." />
+            </div>
+
+            <div class="col-md-1 d-flex align-items-end pb-1">
+                <div class="form-check form-switch">
+                    <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                    <label class="form-check-label form-label mb-0">Active</label>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="lms-action-bar mt-3" style="border-radius:var(--radius-md)">
+        <button type="submit" class="btn-lms-primary">
+            <i class="bi bi-save-fill"></i> @(isEdit ? "Update Employee" : "Save Employee")
+        </button>
+        <a asp-action="Index" class="btn-lms-secondary"><i class="bi bi-x-lg"></i> Cancel</a>
+    </div>
+</form>

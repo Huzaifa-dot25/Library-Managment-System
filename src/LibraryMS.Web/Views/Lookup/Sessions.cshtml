@@ -1,0 +1,56 @@
+@{ ViewData["Title"] = "Manage Sessions"; }
+
+<div class="lms-page-header">
+    <div>
+        <h4><i class="bi bi-calendar-range"></i> Manage Sessions</h4>
+        <div class="header-subtitle">Academic year sessions, e.g. 2026-2027.</div>
+    </div>
+    <button class="btn-lms-outline" id="btnAddRow"><i class="bi bi-plus-lg"></i> Add Row</button>
+</div>
+
+<div class="lms-grid-wrapper">
+    <div class="lms-grid-scroll">
+        <table class="lms-table">
+            <thead><tr>
+                <th style="width:30%">Session Name</th>
+                <th style="width:20%">Start Date</th>
+                <th style="width:20%">End Date</th>
+                <th style="width:5%;text-align:center">Delete</th>
+            </tr></thead>
+            <tbody id="gridBody"><tr><td colspan="4" class="text-center py-4 text-muted"><i class="bi bi-hourglass-split me-2"></i>Loading...</td></tr></tbody>
+        </table>
+    </div>
+    <div class="lms-action-bar">
+        <button class="btn-lms-success" id="btnSave"><i class="bi bi-save2"></i> Save</button>
+        <button class="btn-lms-secondary" onclick="window.location='/'"><i class="bi bi-x-lg"></i> Close</button>
+    </div>
+</div>
+
+@section Scripts {<script>
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function renderRow(s){
+    return '<tr data-id="'+s.sessionId+'" data-dirty="false">'+
+    '<td><input class="grid-input col-name" value="'+esc(s.sessionName)+'" placeholder="e.g. 2026-2027" /></td>'+
+    '<td><input type="date" class="grid-input col-start" value="'+(s.startDate?s.startDate.substring(0,10):'')+'" /></td>'+
+    '<td><input type="date" class="grid-input col-end" value="'+(s.endDate?s.endDate.substring(0,10):'')+'" /></td>'+
+    '<td class="text-center"><button class="btn-grid-delete" data-id="'+s.sessionId+'"><i class="bi bi-trash3"></i></button></td></tr>';}
+function blankRow(){return renderRow({sessionId:0,sessionName:'',startDate:null,endDate:null});}
+function loadGrid(){$.get('/Lookup/GetSessions',function(d){$('#gridBody').html(d.map(renderRow).join('')+blankRow());bindEvents();});}
+function bindEvents(){
+    $('#gridBody').off('input change').on('input change','input',function(){
+        var $r=$(this).closest('tr').attr('data-dirty','true').addClass('row-dirty');
+        if($r.is(':last-child')&&$r.attr('data-id')==='0'){$('#gridBody').append(blankRow());bindEvents();}
+    });
+    $('#gridBody').off('click','.btn-grid-delete').on('click','.btn-grid-delete',function(){
+        var id=parseInt($(this).data('id'));var $r=$(this).closest('tr');
+        if(id===0){$r.remove();return;}if(!confirmDelete('Delete session?'))return;
+        $.post('/Lookup/DeleteSession',JSON.stringify(id),function(r){if(r.success){$r.fadeOut(200,function(){$(this).remove();});showToast('Deleted.');}else showToast(r.message,'error');},'json');
+    });}
+$('#btnSave').click(function(){
+    var p=[];$('#gridBody tr[data-dirty="true"]').each(function(){var n=$(this).find('.col-name').val().trim();if(!n)return;p.push({sessionId:parseInt($(this).attr('data-id'))||0,sessionName:n,startDate:$(this).find('.col-start').val()||null,endDate:$(this).find('.col-end').val()||null});});
+    if(!p.length){showToast('No changes.','info');return;}
+    $.ajax({url:'/Lookup/SaveSession',type:'POST',contentType:'application/json',data:JSON.stringify(p[0]),success:function(r){if(r.success){showToast('Saved.');loadGrid();}else showToast(r.message,'error');}});
+});
+$('#btnAddRow').click(function(){$('#gridBody').append(blankRow());bindEvents();$('#gridBody tr:last-child .col-name').focus();});
+loadGrid();
+</script>}

@@ -1,0 +1,486 @@
+@model LibraryMS.Application.ViewModels.BookFormViewModel
+@{
+    bool isEdit = Model.BookId > 0;
+    ViewData["Title"] = isEdit ? "Edit Book" : "Add Book";
+}
+
+<div class="lms-page-header">
+    <div>
+        <h4><i class="bi bi-@(isEdit ? "pencil-square" : "plus-circle-fill")"></i> @ViewData["Title"]</h4>
+        <div class="header-subtitle">@(isEdit ? "Update book details below." : "Fill in the details to add a new book to the catalog.")</div>
+    </div>
+    <a asp-action="Index" class="btn-lms-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Books
+    </a>
+</div>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger alert-dismissible d-flex gap-2 align-items-start mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+        <div>
+            @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <div>@err.ErrorMessage</div>
+            }
+        </div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<form asp-action="Save" method="post" enctype="multipart/form-data" id="bookForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="BookId" />
+    <input type="hidden" asp-for="CoverImagePath" />
+
+    <div class="row g-3">
+
+        <!-- ══ Left Column ════════════════════════════════════════ -->
+        <div class="col-lg-8">
+            <div class="lms-card p-4">
+
+                <!-- Row 1: Title + Status -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-8">
+                        <label class="form-label">Book Title <span class="text-danger">*</span></label>
+                        <input asp-for="Title" class="form-control" placeholder="Enter full book title..." />
+                        <span asp-validation-for="Title" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Book Status</label>
+                        <select asp-for="BookStatus" class="form-select">
+                            <option value="New Book">New Book</option>
+                            <option value="Old Book">Old Book</option>
+                            <option value="Reference">Reference</option>
+                            <option value="Donated">Donated</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Row 2: Publisher + Description -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Publisher</label>
+                        <div class="input-group">
+                            <select asp-for="PublisherId" class="form-select" id="publisherSelect">
+                                <option value="">-- select publisher --</option>
+                                @foreach (var p in Model.Publishers)
+                                {
+                                    <option value="@p.PublisherId">@p.Name</option>
+                                }
+                            </select>
+                            <button type="button" class="btn btn-outline-primary px-3" id="btnAddPublisher" title="Quick-add publisher">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Vendor / Supplier</label>
+                        <div class="input-group">
+                            <select asp-for="VendorId" class="form-select" id="vendorSelect">
+                                <option value="">-- select vendor --</option>
+                                @foreach (var v in Model.Vendors)
+                                {
+                                    <option value="@v.VendorId">@v.Name</option>
+                                }
+                            </select>
+                            <button type="button" class="btn btn-outline-primary px-3" id="btnAddVendor" title="Quick-add vendor">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <textarea asp-for="Description" class="form-control" rows="3" placeholder="Brief description of the book..."></textarea>
+                </div>
+
+                <!-- Row 3: ISBN, Pages, BarCode, Type -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label">ISBN No</label>
+                        <input asp-for="ISBN" class="form-control" placeholder="ISBN..." />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Pages</label>
+                        <input asp-for="Pages" type="number" min="0" class="form-control" placeholder="0" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Bar Code</label>
+                        <input asp-for="BarCode" class="form-control" placeholder="Barcode..." />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Type</label>
+                        <select asp-for="BookKind" class="form-select">
+                            <option value="Book">Book</option>
+                            <option value="Magazine">Magazine</option>
+                            <option value="Journal">Journal</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Price</label>
+                        <input asp-for="Price" type="number" step="0.01" min="0" class="form-control" placeholder="0.00" />
+                    </div>
+                </div>
+
+                <!-- Row 4: Rack, Select Type, Accession, Dewey -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Rack / Grade</label>
+                        <input asp-for="RackOrGrade" class="form-control" placeholder="Rack or grade..." />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Select Type</label>
+                        <select asp-for="BookTypeId" class="form-select">
+                            <option value="">-- select type --</option>
+                            @foreach (var bt in Model.BookTypes)
+                            {
+                                <option value="@bt.BookTypeId">@bt.TypeName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Accession Number</label>
+                        <input asp-for="AccessionNumber" class="form-control" placeholder="Accession #..." />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Call No / Dewey Code</label>
+                        <input asp-for="CallNumberDeweyCode" class="form-control" placeholder="Dewey code..." />
+                    </div>
+                </div>
+
+                <!-- Row 5: Qty, Rack Name, Remarks -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-2">
+                        <label class="form-label">Total Qty</label>
+                        <input asp-for="TotalQuantity" type="number" min="0" class="form-control" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Rack Name</label>
+                        <input asp-for="RackName" class="form-control" placeholder="Rack name..." />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Librarian Remarks</label>
+                        <input asp-for="LibrarianRemarks" class="form-control" placeholder="Optional notes..." />
+                    </div>
+                </div>
+
+                <!-- Row 6: Authors + Categories multi-select -->
+                <div class="row g-3">
+                    <!-- Authors -->
+                    <div class="col-md-6">
+                        <label class="form-label">Authors</label>
+                        <div class="multi-select-box">
+                            <div class="multi-select-input d-flex gap-2 mb-2">
+                                <select class="form-select form-select-sm" id="authorDropdown">
+                                    <option value="">-- select author --</option>
+                                    @foreach (var a in Model.Authors)
+                                    {
+                                        <option value="@a.AuthorId" data-name="@a.Name">@a.Name</option>
+                                    }
+                                </select>
+                                <button type="button" class="btn btn-primary btn-sm px-3" id="btnAddAuthor">
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+                            </div>
+                            <div class="multi-select-list" id="authorList">
+                                @foreach (var id in Model.SelectedAuthorIds)
+                                {
+                                    var a = Model.Authors.FirstOrDefault(x => x.AuthorId == id);
+                                    if (a != null)
+                                    {
+                                        <div class="multi-select-tag" data-id="@a.AuthorId">
+                                            <input type="hidden" name="SelectedAuthorIds" value="@a.AuthorId" />
+                                            <i class="bi bi-person-fill me-1"></i>@a.Name
+                                            <button type="button" class="remove-tag ms-2"><i class="bi bi-x"></i></button>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Categories -->
+                    <div class="col-md-6">
+                        <label class="form-label">Categories</label>
+                        <div class="multi-select-box">
+                            <div class="multi-select-input d-flex gap-2 mb-2">
+                                <select class="form-select form-select-sm" id="categoryDropdown">
+                                    <option value="">-- select category --</option>
+                                    @foreach (var c in Model.Categories)
+                                    {
+                                        <option value="@c.CategoryId" data-name="@c.Name">@c.Name</option>
+                                    }
+                                </select>
+                                <button type="button" class="btn btn-primary btn-sm px-3" id="btnAddCategory">
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+                            </div>
+                            <div class="multi-select-list" id="categoryList">
+                                @foreach (var id in Model.SelectedCategoryIds)
+                                {
+                                    var c = Model.Categories.FirstOrDefault(x => x.CategoryId == id);
+                                    if (c != null)
+                                    {
+                                        <div class="multi-select-tag" data-id="@c.CategoryId">
+                                            <input type="hidden" name="SelectedCategoryIds" value="@c.CategoryId" />
+                                            <i class="bi bi-tag-fill me-1"></i>@c.Name
+                                            <button type="button" class="remove-tag ms-2"><i class="bi bi-x"></i></button>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /lms-card -->
+        </div><!-- /col-lg-8 -->
+
+        <!-- ══ Right Column ═══════════════════════════════════════ -->
+        <div class="col-lg-4">
+
+            <!-- Cover Image -->
+            <div class="lms-card p-4 mb-3">
+                <label class="form-label fw-bold">Book Cover Image</label>
+                <div class="cover-preview-wrapper mb-2" id="coverPreviewWrap">
+                    @if (!string.IsNullOrEmpty(Model.CoverImagePath))
+                    {
+                        <img src="@Model.CoverImagePath" class="cover-preview-img" id="coverPreview" />
+                    }
+                    else
+                    {
+                        <div class="cover-placeholder" id="coverPlaceholder">
+                            <i class="bi bi-image fs-1 text-muted"></i>
+                            <div class="text-muted-sm mt-1">No image</div>
+                        </div>
+                    }
+                </div>
+                <div class="d-flex gap-2">
+                    <label class="btn-lms-outline flex-grow-1 text-center" style="cursor:pointer">
+                        <i class="bi bi-upload me-1"></i>Attach
+                        <input type="file" name="CoverImage" accept=".jpg,.jpeg,.png,.gif"
+                               class="d-none" id="coverInput" />
+                    </label>
+                    <button type="button" class="btn-lms-secondary" id="btnResetCover">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </button>
+                </div>
+                <div class="text-muted-sm mt-2">JPG, PNG, GIF — max 5 MB</div>
+            </div>
+
+            <!-- Summary card -->
+            <div class="lms-card p-4">
+                <div class="fw-bold mb-3" style="color:var(--lms-primary-dark)">
+                    <i class="bi bi-info-circle me-2"></i>Quick Summary
+                </div>
+                <div class="d-flex flex-column gap-2 text-muted-sm">
+                    <div class="d-flex justify-content-between">
+                        <span>Status</span>
+                        <span class="fw-semibold text-dark" id="summaryStatus">@(Model.BookStatus ?? "New Book")</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Total Qty</span>
+                        <span class="fw-semibold text-dark" id="summaryQty">@Model.TotalQuantity</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Authors selected</span>
+                        <span class="fw-semibold text-dark" id="summaryAuthors">@Model.SelectedAuthorIds.Count</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Categories selected</span>
+                        <span class="fw-semibold text-dark" id="summaryCategories">@Model.SelectedCategoryIds.Count</span>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /col-lg-4 -->
+    </div><!-- /row -->
+
+    <!-- ── Action Bar ────────────────────────────────────────────── -->
+    <div class="lms-action-bar mt-3" style="border-radius:var(--radius-md)">
+        <button type="submit" class="btn-lms-primary" id="btnSave">
+            <i class="bi bi-save-fill"></i> @(isEdit ? "Update Book" : "Save Book")
+        </button>
+        <button type="button" class="btn-lms-secondary" id="btnClear">
+            <i class="bi bi-eraser"></i> Clear
+        </button>
+        <a asp-action="Index" class="btn-lms-secondary">
+            <i class="bi bi-x-lg"></i> Close
+        </a>
+    </div>
+
+</form>
+
+<!-- Quick-add Publisher Modal -->
+<div class="modal fade" id="publisherQuickModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:400px">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:12px;overflow:hidden">
+            <div class="modal-header border-0 text-white" style="background:linear-gradient(135deg,#1e3a8a,#1e40af)">
+                <h6 class="modal-title fw-bold mb-0"><i class="bi bi-building me-2"></i>Quick Add Publisher</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <label class="form-label">Publisher Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="quickPubName" placeholder="Publisher name..." />
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button class="btn-lms-primary" id="btnSaveQuickPub"><i class="bi bi-save2"></i> Add</button>
+                <button class="btn-lms-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick-add Vendor Modal -->
+<div class="modal fade" id="vendorQuickModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:400px">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:12px;overflow:hidden">
+            <div class="modal-header border-0 text-white" style="background:linear-gradient(135deg,#1e3a8a,#1e40af)">
+                <h6 class="modal-title fw-bold mb-0"><i class="bi bi-shop me-2"></i>Quick Add Vendor</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <label class="form-label">Vendor Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="quickVendorName" placeholder="Vendor name..." />
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button class="btn-lms-primary" id="btnSaveQuickVendor"><i class="bi bi-save2"></i> Add</button>
+                <button class="btn-lms-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i> Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // ── Cover image preview ──────────────────────────────────────
+    $('#coverInput').on('change', function() {
+        var file = this.files[0];
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) { showToast('Image must be under 5 MB.', 'error'); this.value=''; return; }
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            $('#coverPlaceholder').hide();
+            if ($('#coverPreview').length) {
+                $('#coverPreview').attr('src', e.target.result).show();
+            } else {
+                $('#coverPreviewWrap').prepend('<img src="' + e.target.result + '" class="cover-preview-img" id="coverPreview" />');
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+
+    $('#btnResetCover').click(function() {
+        $('#coverInput').val('');
+        $('#coverPreview').remove();
+        $('#coverPlaceholder').show();
+    });
+
+    // ── Summary live updates ─────────────────────────────────────
+    $('[name="BookStatus"]').on('change', function() { $('#summaryStatus').text($(this).val()); });
+    $('[name="TotalQuantity"]').on('input', function()  { $('#summaryQty').text($(this).val()); });
+
+    // ── Multi-select: Authors ────────────────────────────────────
+    $('#btnAddAuthor').click(function(e) {
+        e.preventDefault();
+        var $sel = $('#authorDropdown');
+        var id   = $sel.val();
+        var name = $sel.find('option:selected').attr('data-name');
+        if (!id || id === '') { showToast('Please select an author first.', 'info'); return; }
+        if ($('#authorList [data-id="' + id + '"]').length) { showToast('Author already added.', 'info'); return; }
+        var safeName = $('<div>').text(name).html();
+        $('#authorList').append(
+            '<div class="multi-select-tag" data-id="' + id + '">' +
+            '<input type="hidden" name="SelectedAuthorIds" value="' + id + '" />' +
+            '<i class="bi bi-person-fill me-1"></i>' + safeName +
+            '<button type="button" class="remove-tag ms-2"><i class="bi bi-x"></i></button></div>'
+        );
+        $sel.val('');
+        updateSummary();
+    });
+
+    // ── Multi-select: Categories ─────────────────────────────────
+    $('#btnAddCategory').click(function(e) {
+        e.preventDefault();
+        var $sel = $('#categoryDropdown');
+        var id   = $sel.val();
+        var name = $sel.find('option:selected').attr('data-name');
+        if (!id || id === '') { showToast('Please select a category first.', 'info'); return; }
+        if ($('#categoryList [data-id="' + id + '"]').length) { showToast('Category already added.', 'info'); return; }
+        var safeName = $('<div>').text(name).html();
+        $('#categoryList').append(
+            '<div class="multi-select-tag" data-id="' + id + '">' +
+            '<input type="hidden" name="SelectedCategoryIds" value="' + id + '" />' +
+            '<i class="bi bi-tag-fill me-1"></i>' + safeName +
+            '<button type="button" class="remove-tag ms-2"><i class="bi bi-x"></i></button></div>'
+        );
+        $sel.val('');
+        updateSummary();
+    });
+
+    // Remove tag
+    $(document).on('click', '.remove-tag', function() {
+        $(this).closest('.multi-select-tag').remove();
+        updateSummary();
+    });
+
+    function updateSummary() {
+        $('#summaryAuthors').text($('#authorList .multi-select-tag').length);
+        $('#summaryCategories').text($('#categoryList .multi-select-tag').length);
+    }
+
+    // ── Quick-add Publisher ──────────────────────────────────────
+    var pubModal    = new bootstrap.Modal(document.getElementById('publisherQuickModal'));
+    var vendorModal = new bootstrap.Modal(document.getElementById('vendorQuickModal'));
+
+    $('#btnAddPublisher').click(function() { $('#quickPubName').val(''); pubModal.show(); setTimeout(function(){ $('#quickPubName').focus(); }, 300); });
+    $('#btnSaveQuickPub').click(function() {
+        var name = $('#quickPubName').val().trim();
+        if (!name) { showToast('Name required.', 'error'); return; }
+        $.ajax({ url:'/Books/QuickAddPublisher', type:'POST', contentType:'application/json', data: JSON.stringify(name),
+            success: function(res) {
+                if (res.success) {
+                    $('#publisherSelect').append('<option value="' + res.data.publisherId + '" selected>' + res.data.name + '</option>');
+                    pubModal.hide();
+                    showToast('Publisher added.');
+                } else showToast(res.message, 'error');
+            }
+        });
+    });
+
+    // ── Quick-add Vendor ─────────────────────────────────────────
+    $('#btnAddVendor').click(function() { $('#quickVendorName').val(''); vendorModal.show(); setTimeout(function(){ $('#quickVendorName').focus(); }, 300); });
+    $('#btnSaveQuickVendor').click(function() {
+        var name = $('#quickVendorName').val().trim();
+        if (!name) { showToast('Name required.', 'error'); return; }
+        $.ajax({ url:'/Books/QuickAddVendor', type:'POST', contentType:'application/json', data: JSON.stringify(name),
+            success: function(res) {
+                if (res.success) {
+                    $('#vendorSelect').append('<option value="' + res.data.vendorId + '" selected>' + res.data.name + '</option>');
+                    vendorModal.hide();
+                    showToast('Vendor added.');
+                } else showToast(res.message, 'error');
+            }
+        });
+    });
+
+    // ── Clear form ───────────────────────────────────────────────
+    $('#btnClear').click(function() {
+        if (!confirm('Clear all fields?')) return;
+        $('#bookForm')[0].reset();
+        $('#authorList').empty();
+        $('#categoryList').empty();
+        $('#coverPreview').remove();
+        $('#coverPlaceholder').show();
+        updateSummary();
+    });
+
+    // ── Enter in quick-add modals ────────────────────────────────
+    $('#quickPubName').on('keypress',    function(e){ if(e.which===13) $('#btnSaveQuickPub').click(); });
+    $('#quickVendorName').on('keypress', function(e){ if(e.which===13) $('#btnSaveQuickVendor').click(); });
+</script>
+}

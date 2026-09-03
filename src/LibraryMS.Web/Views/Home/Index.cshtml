@@ -1,0 +1,173 @@
+﻿@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="row g-4">
+
+    <!-- ══ Left: Main Content ════════════════════════════════════════ -->
+    <div class="col-xl-9">
+
+        <!-- Welcome Banner -->
+        <div class="lms-welcome mb-4">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h3><i class="bi bi-journal-bookmark-fill me-2"></i>Welcome to Library Management System</h3>
+                    <p>Manage books, members, purchases, and more from one place.</p>
+                    <div class="welcome-stats">
+                        <div class="stat-pill"><i class="bi bi-calendar3"></i><span id="liveDateFull"></span></div>
+                        <div class="stat-pill"><i class="bi bi-clock"></i><span id="liveTime"></span></div>
+                        <div class="stat-pill"><i class="bi bi-book"></i>Academic Year 2026-2027</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Books And Members -->
+        <div class="mb-4">
+            <div class="lms-section-label">
+                <i class="bi bi-grid-3x3-gap-fill"></i> Books And Members
+            </div>
+            <div class="row g-3">
+                <div class="col-6 col-md-4 col-lg-3">
+                    <a asp-controller="Books" asp-action="Create" class="dash-tile tile-green">
+                        <div class="tile-icon"><i class="bi bi-plus-circle-fill"></i></div>
+                        <span>New Book</span>
+                    </a>
+                </div>
+                <div class="col-6 col-md-4 col-lg-3">
+                    <a asp-controller="Purchases" asp-action="Create" class="dash-tile tile-orange">
+                        <div class="tile-icon"><i class="bi bi-cart-plus-fill"></i></div>
+                        <span>Purchase Books</span>
+                    </a>
+                </div>
+                <div class="col-6 col-md-4 col-lg-3">
+                    <a asp-controller="Purchases" asp-action="Index" class="dash-tile tile-purple">
+                        <div class="tile-icon"><i class="bi bi-receipt-cutoff"></i></div>
+                        <span>Purchase Order / Invoice</span>
+                    </a>
+                </div>
+                <div class="col-6 col-md-4 col-lg-3">
+                    <a asp-controller="Books" asp-action="Index" class="dash-tile">
+                        <div class="tile-icon"><i class="bi bi-book-fill"></i></div>
+                        <span>Manage Books</span>
+                    </a>
+                </div>
+                <div class="col-6 col-md-4 col-lg-3">
+                    <a asp-controller="IssueReturn" asp-action="Index" class="dash-tile tile-teal">
+                        <div class="tile-icon"><i class="bi bi-arrow-left-right"></i></div>
+                        <span>Issue / Return Books</span>
+                    </a>
+                </div>
+                <div class="col-6 col-md-4 col-lg-3">
+                    <a asp-controller="IssuedBooks" asp-action="Index" class="dash-tile tile-pink">
+                        <div class="tile-icon"><i class="bi bi-journals"></i></div>
+                        <span>Manage Issued Books</span>
+                    </a>
+                </div>
+                <div class="col-6 col-md-4 col-lg-3">
+                    <a asp-controller="OverdueBooks" asp-action="Index" class="dash-tile tile-red">
+                        <div class="tile-icon"><i class="bi bi-alarm-fill"></i></div>
+                        <span>Overdue Books</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Authors & Publishers -->
+        <div class="mb-4">
+            <div class="lms-section-label">
+                <i class="bi bi-people-fill"></i> Book Authors And Publishers
+            </div>
+            <div class="row g-3">
+                <div class="col-6 col-md-4 col-lg-3">
+                    <a asp-controller="Authors" asp-action="Index" class="dash-tile">
+                        <div class="tile-icon"><i class="bi bi-person-lines-fill"></i></div>
+                        <span>Manage Authors</span>
+                    </a>
+                </div>
+                <div class="col-6 col-md-4 col-lg-3">
+                    <a asp-controller="Publishers" asp-action="Index" class="dash-tile tile-purple">
+                        <div class="tile-icon"><i class="bi bi-building"></i></div>
+                        <span>Manage Publishers</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Categories -->
+        <div class="mb-4">
+            <div class="lms-section-label">
+                <i class="bi bi-tags-fill"></i> Book Categories
+            </div>
+            <div class="row g-3">
+                <div class="col-6 col-md-4 col-lg-3">
+                    <a asp-controller="Categories" asp-action="Index" class="dash-tile tile-teal">
+                        <div class="tile-icon"><i class="bi bi-tags-fill"></i></div>
+                        <span>Manage Categories</span>
+                    </a>
+                </div>
+                <div class="col-6 col-md-4 col-lg-3">
+                    <a asp-controller="BookTypes" asp-action="Index" class="dash-tile tile-orange">
+                        <div class="tile-icon"><i class="bi bi-bookmark-star-fill"></i></div>
+                        <span>Manage Types</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ══ Right: Widgets ════════════════════════════════════════════ -->
+    <div class="col-xl-3">
+
+        @await Html.PartialAsync("_BookSearch", "dashboard")
+
+        <!-- Issued Book Search Widget -->
+        <div class="lms-widget">
+            <div class="lms-widget-header">
+                <i class="bi bi-journal-check"></i> Issued Book Search
+            </div>
+            <div class="lms-widget-body">
+                <div class="mb-2">
+                    <label class="form-label">ISBN No / Book Title</label>
+                    <input type="text" class="form-control form-control-sm" id="issuedSearchKeyword" placeholder="ISBN or title..." />
+                </div>
+                <button class="btn btn-sm w-100 btn-lms-primary" id="btnIssuedSearch">
+                    <i class="bi bi-search"></i> Search
+                </button>
+                <div class="mt-2" style="max-height:200px;overflow-y:auto">
+                    <table class="table table-sm table-bordered mb-0" id="issuedSearchResults" style="font-size:.75rem;display:none">
+                        <thead class="table-primary"><tr><th>Date</th><th>ISBN</th><th>Title</th><th>Member</th></tr></thead>
+                        <tbody id="issuedSearchBody"></tbody>
+                    </table>
+                    <div class="text-muted-sm mt-1 text-center" id="issuedSearchMsg" style="display:none"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Issued Book Search
+    $('#btnIssuedSearch, #issuedSearchKeyword').on('click keypress', function(e) {
+        if (e.type === 'keypress' && e.which !== 13) return;
+        var keyword = $('#issuedSearchKeyword').val().trim();
+        if (!keyword) { showToast('Please enter a keyword.', 'info'); return; }
+        $.get('/IssuedBooks/Search', { keyword }, function(res) {
+            var $b = $('#issuedSearchBody').empty();
+            if (!res || !res.length) {
+                $('#issuedSearchResults').hide();
+                $('#issuedSearchMsg').text('No issued books found.').show();
+                return;
+            }
+            $('#issuedSearchMsg').hide();
+            res.forEach(function(ib) {
+                $b.append('<tr><td>' + ib.issueDate + '</td><td>' + (ib.isbn||'') + '</td><td>' + ib.bookTitle + '</td><td>' + ib.memberName + '</td></tr>');
+            });
+            $('#issuedSearchResults').show();
+        });
+    });
+</script>
+}

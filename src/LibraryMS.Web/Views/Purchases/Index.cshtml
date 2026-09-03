@@ -1,0 +1,175 @@
+@model LibraryMS.Application.ViewModels.PurchaseFilterViewModel
+@using LibraryMS.Domain.Enums
+@{
+    ViewData["Title"] = "Purchase History";
+}
+
+<div class="lms-page-header">
+    <div>
+        <h4><i class="bi bi-clock-history"></i> Purchase History</h4>
+        <div class="header-subtitle">Search and filter purchase orders and invoices.</div>
+    </div>
+    <a asp-action="Create" class="btn-lms-primary">
+        <i class="bi bi-plus-lg"></i> New Purchase
+    </a>
+</div>
+
+<div class="row g-3">
+
+    <!-- ══ Left: Filter Panel ════════════════════════════════════ -->
+    <div class="col-lg-3">
+        <div class="lms-card p-3">
+            <div class="fw-bold mb-3" style="color:var(--lms-primary-dark);font-size:.85rem;text-transform:uppercase;letter-spacing:.05em">
+                <i class="bi bi-funnel me-2"></i>Search Filters
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">From Date</label>
+                <input type="date" class="form-control form-control-sm" id="fFrom"
+                       value="@Model.FromDate?.ToString("yyyy-MM-dd")" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">To Date</label>
+                <input type="date" class="form-control form-control-sm" id="fTo"
+                       value="@Model.ToDate?.ToString("yyyy-MM-dd")" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Invoice / Order</label>
+                <select class="form-select form-select-sm" id="fType">
+                    <option value="0">Invoice</option>
+                    <option value="1">Order</option>
+                </select>
+                <div class="form-check mt-1">
+                    <input class="form-check-input" type="checkbox" id="fBothTypes" checked />
+                    <label class="form-check-label form-label mb-0">Check for both Invoice or Order</label>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Supplier</label>
+                <select class="form-select form-select-sm" id="fVendor">
+                    <option value="">-- select supplier --</option>
+                    @foreach (var v in Model.Vendors)
+                    {
+                        <option value="@v.VendorId">@v.Name</option>
+                    }
+                </select>
+                <div class="form-check mt-1">
+                    <input class="form-check-input" type="checkbox" id="fAllVendors" checked />
+                    <label class="form-check-label form-label mb-0">Check for all Suppliers</label>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Purchase #</label>
+                <input type="text" class="form-control form-control-sm" id="fPurchaseNo" placeholder="e.g. 00001" />
+                <div class="form-check mt-1">
+                    <input class="form-check-input" type="checkbox" id="fAllPurchaseNums" checked />
+                    <label class="form-check-label form-label mb-0">Check for given purchase #</label>
+                </div>
+            </div>
+
+            <button class="btn btn-primary btn-sm w-100" id="btnSearch">
+                <i class="bi bi-search me-1"></i> Search
+            </button>
+        </div>
+    </div>
+
+    <!-- ══ Right: Results Grid ════════════════════════════════════ -->
+    <div class="col-lg-9">
+        <div class="lms-grid-wrapper">
+            <div class="lms-grid-scroll">
+                <table class="lms-table">
+                    <thead>
+                        <tr>
+                            <th style="width:10%">Purchase No</th>
+                            <th>Supplier</th>
+                            <th style="width:12%">Date</th>
+                            <th style="width:10%">Type</th>
+                            <th style="width:8%;text-align:center">Items</th>
+                            <th style="width:12%;text-align:right">Net Amount</th>
+                            <th style="width:8%;text-align:center">Edit</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                        <tr><td colspan="7" class="text-center py-4 text-muted">
+                            <i class="bi bi-search me-2"></i>Set filters and click Search.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="lms-action-bar">
+                <span class="text-muted-sm" id="recordCount">Records Found: 0</span>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+<script>
+    // Toggle vendor/type/purchaseNo selects based on checkboxes
+    $('#fAllVendors').on('change',      function() { $('#fVendor').prop('disabled', this.checked); });
+    $('#fBothTypes').on('change',       function() { $('#fType').prop('disabled', this.checked); });
+    $('#fAllPurchaseNums').on('change', function() { $('#fPurchaseNo').prop('disabled', this.checked); });
+
+    // Init disabled state
+    $('#fVendor').prop('disabled', true);
+    $('#fType').prop('disabled', true);
+    $('#fPurchaseNo').prop('disabled', true);
+
+    function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function doSearch() {
+        var payload = {
+            fromDate:       $('#fFrom').val() || null,
+            toDate:         $('#fTo').val()   || null,
+            invoiceOrOrder: $('#fBothTypes').is(':checked') ? null : parseInt($('#fType').val()),
+            vendorId:       $('#fAllVendors').is(':checked') ? null : (parseInt($('#fVendor').val()) || null),
+            purchaseNumber: $('#fAllPurchaseNums').is(':checked') ? null : ($('#fPurchaseNo').val().trim() || null),
+            allVendors:     $('#fAllVendors').is(':checked'),
+            allPurchaseNums:$('#fAllPurchaseNums').is(':checked'),
+            bothTypes:      $('#fBothTypes').is(':checked')
+        };
+
+        $('#resultsBody').html('<tr><td colspan="7" class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Searching...</td></tr>');
+
+        $.ajax({
+            url: '/Purchases/Search', type: 'POST', contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function(res) {
+                if (!res.length) {
+                    $('#resultsBody').html('<tr><td colspan="7" class="text-center py-4 text-muted"><i class="bi bi-inbox me-2"></i>No records found.</td></tr>');
+                    $('#recordCount').text('Records Found: 0');
+                    return;
+                }
+                var html = res.map(function(p) {
+                    return '<tr>' +
+                        '<td><strong>' + esc(p.purchaseNumber) + '</strong></td>' +
+                        '<td>' + esc(p.vendorName || '—') + '</td>' +
+                        '<td class="text-muted-sm">' + new Date(p.purchaseDate).toLocaleDateString('en-GB') + '</td>' +
+                        '<td><span class="lms-badge ' + (p.invoiceOrOrderLabel === 'Invoice' ? 'lms-badge-info' : 'lms-badge-active') + '">' + p.invoiceOrOrderLabel + '</span></td>' +
+                        '<td class="text-center text-muted-sm">' + p.itemCount + '</td>' +
+                        '<td class="text-end fw-semibold">PKR ' + parseFloat(p.netAmount).toFixed(2) + '</td>' +
+                        '<td class="text-center">' +
+                            '<a href="/Purchases/Edit/' + p.purchaseId + '" class="btn btn-sm btn-outline-primary">' +
+                                '<i class="bi bi-pencil"></i> Edit</a>' +
+                        '</td>' +
+                        '</tr>';
+                }).join('');
+                $('#resultsBody').html(html);
+                $('#recordCount').text('Records Found: ' + res.length);
+            },
+            error: function() {
+                $('#resultsBody').html('<tr><td colspan="7" class="text-center text-danger py-3">Search failed. Please try again.</td></tr>');
+            }
+        });
+    }
+
+    $('#btnSearch').click(doSearch);
+
+    // Search on Enter in Purchase # field
+    $('#fPurchaseNo').on('keypress', function(e) { if (e.which === 13) doSearch(); });
+</script>
+}

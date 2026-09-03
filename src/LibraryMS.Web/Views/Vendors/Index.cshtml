@@ -1,0 +1,180 @@
+@{
+    ViewData["Title"] = "Manage Vendors";
+}
+
+<div class="lms-page-header">
+    <div>
+        <h4><i class="bi bi-shop"></i> Manage Vendors</h4>
+        <div class="header-subtitle">Add and manage book suppliers and vendors.</div>
+    </div>
+    <button class="btn-lms-primary" id="btnNewVendor">
+        <i class="bi bi-plus-lg"></i> New Vendor
+    </button>
+</div>
+
+<!-- Vendors Grid -->
+<div class="lms-grid-wrapper">
+    <div class="lms-grid-scroll">
+        <table class="lms-table">
+            <thead>
+                <tr>
+                    <th style="width:5%">#</th>
+                    <th style="width:35%">Vendor Name</th>
+                    <th style="width:50%">Contact Info</th>
+                    <th style="width:10%;text-align:center">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="vendorBody">
+                <tr><td colspan="4" class="text-center py-4 text-muted">
+                    <i class="bi bi-hourglass-split me-2"></i>Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="lms-action-bar">
+        <span class="text-muted-sm" id="vendorCount"></span>
+        <button class="btn-lms-secondary ms-auto" onclick="window.location='/'">
+            <i class="bi bi-x-lg"></i> Close
+        </button>
+    </div>
+</div>
+
+<!-- Add / Edit Modal -->
+<div class="modal fade" id="vendorModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:500px">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:12px;overflow:hidden">
+            <div class="modal-header border-0 text-white" style="background:linear-gradient(135deg,#1e3a8a,#1e40af);padding:16px 20px">
+                <h6 class="modal-title fw-bold mb-0" id="modalTitle">
+                    <i class="bi bi-shop me-2"></i>New Vendor
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="vendorId" value="0" />
+                <div class="mb-3">
+                    <label class="form-label">Vendor Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="vendorName" placeholder="Enter vendor name..." maxlength="150" />
+                    <div class="text-danger small mt-1" id="nameError" style="display:none"></div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Contact Info</label>
+                    <textarea class="form-control" id="vendorContact" rows="3"
+                        placeholder="Email, phone, address..."></textarea>
+                    <div class="text-muted-sm mt-1">You can include email, phone, and address.</div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3 gap-2">
+                <button class="btn-lms-primary" id="btnSaveVendor">
+                    <i class="bi bi-save2"></i> Save Vendor
+                </button>
+                <button class="btn-lms-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    var modal = new bootstrap.Modal(document.getElementById('vendorModal'));
+
+    function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    function renderRow(v, i) {
+        return '<tr data-id="' + v.vendorId + '">' +
+            '<td class="text-muted-sm">' + (i + 1) + '</td>' +
+            '<td><strong>' + esc(v.name) + '</strong></td>' +
+            '<td class="text-muted-sm">' + esc(v.contactInfo || '') + '</td>' +
+            '<td class="text-center">' +
+                '<button class="btn btn-sm btn-outline-primary me-1 btn-edit" data-id="' + v.vendorId + '" title="Edit">' +
+                    '<i class="bi bi-pencil"></i></button>' +
+                '<button class="btn btn-sm btn-outline-danger btn-del" data-id="' + v.vendorId + '" title="Delete">' +
+                    '<i class="bi bi-trash3"></i></button>' +
+            '</td></tr>';
+    }
+
+    function loadGrid() {
+        $.get('/Vendors/GetAll', function(data) {
+            if (!data.length) {
+                $('#vendorBody').html('<tr><td colspan="4" class="text-center py-4 text-muted">No vendors yet. Click "New Vendor" to add one.</td></tr>');
+                $('#vendorCount').text('');
+                return;
+            }
+            $('#vendorBody').html(data.map(renderRow).join(''));
+            $('#vendorCount').text(data.length + ' vendor(s)');
+        });
+    }
+
+    // New vendor
+    $('#btnNewVendor').click(function() {
+        $('#modalTitle').html('<i class="bi bi-shop me-2"></i>New Vendor');
+        $('#vendorId').val('0');
+        $('#vendorName').val('');
+        $('#vendorContact').val('');
+        $('#nameError').hide();
+        modal.show();
+        setTimeout(function(){ $('#vendorName').focus(); }, 300);
+    });
+
+    // Edit vendor
+    $(document).on('click', '.btn-edit', function() {
+        var id = $(this).data('id');
+        $.get('/Vendors/GetById', { id: id }, function(res) {
+            if (!res.success) return;
+            $('#modalTitle').html('<i class="bi bi-pencil me-2"></i>Edit Vendor');
+            $('#vendorId').val(res.data.vendorId);
+            $('#vendorName').val(res.data.name);
+            $('#vendorContact').val(res.data.contactInfo || '');
+            $('#nameError').hide();
+            modal.show();
+        });
+    });
+
+    // Delete vendor
+    $(document).on('click', '.btn-del', function() {
+        var id = parseInt($(this).data('id'));
+        if (!confirmDelete('Delete this vendor?')) return;
+        var $btn = $(this).prop('disabled', true).html('<i class="bi bi-hourglass-split"></i>');
+        $.post('/Vendors/Delete', JSON.stringify(id), function(res) {
+            if (res.success) { showToast('Vendor deleted.'); loadGrid(); }
+            else { showToast(res.message, 'error'); $btn.prop('disabled', false).html('<i class="bi bi-trash3"></i>'); }
+        }, 'json');
+    });
+
+    // Save vendor
+    $('#btnSaveVendor').click(function() {
+        var name = $('#vendorName').val().trim();
+        if (!name) { $('#nameError').text('Vendor name is required.').show(); $('#vendorName').focus(); return; }
+        $('#nameError').hide();
+
+        var payload = {
+            vendorId:    parseInt($('#vendorId').val()) || 0,
+            name:        name,
+            contactInfo: $('#vendorContact').val().trim() || null
+        };
+
+        var $btn = $(this).prop('disabled', true).html('<i class="bi bi-hourglass-split me-1"></i>Saving...');
+        $.ajax({
+            url: '/Vendors/Save', type: 'POST', contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function(res) {
+                $btn.prop('disabled', false).html('<i class="bi bi-save2 me-1"></i>Save Vendor');
+                if (res.success) {
+                    modal.hide();
+                    showToast('Vendor saved successfully.');
+                    loadGrid();
+                } else {
+                    showToast(res.message, 'error');
+                }
+            }
+        });
+    });
+
+    // Enter key in name field
+    $('#vendorName').on('keypress', function(e) {
+        if (e.which === 13) $('#btnSaveVendor').click();
+    });
+
+    loadGrid();
+</script>
+}

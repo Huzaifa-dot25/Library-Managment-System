@@ -1,0 +1,254 @@
+@model LibraryMS.Application.ViewModels.BookFormViewModel
+@{
+    ViewData["Title"] = "Manage Books";
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="lms-success-banner">
+        <i class="bi bi-check-circle-fill"></i> @TempData["Success"]
+    </div>
+}
+
+<!-- Page Header -->
+<div class="lms-page-header">
+    <div>
+        <h4><i class="bi bi-book-fill"></i> Manage Books</h4>
+        <div class="header-subtitle">Search, filter and manage the entire book catalog.</div>
+    </div>
+    <a asp-action="Create" class="btn-lms-primary">
+        <i class="bi bi-plus-lg"></i> New Book
+    </a>
+</div>
+
+<!-- Filter Bar -->
+<div class="lms-card p-3 mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-2 col-sm-6">
+            <label class="form-label">Library Type</label>
+            <select class="form-select form-select-sm" id="fBookType">
+                <option value="">All</option>
+                @foreach (var bt in Model.BookTypes)
+                {
+                    <option value="@bt.BookTypeId">@bt.TypeName</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2 col-sm-6">
+            <label class="form-label">Category</label>
+            <select class="form-select form-select-sm" id="fCategory">
+                <option value="">All</option>
+                @foreach (var c in Model.Categories)
+                {
+                    <option value="@c.CategoryId">@c.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2 col-sm-6">
+            <label class="form-label">Author</label>
+            <select class="form-select form-select-sm" id="fAuthor">
+                <option value="">All</option>
+                @foreach (var a in Model.Authors)
+                {
+                    <option value="@a.AuthorId">@a.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2 col-sm-6">
+            <label class="form-label">Publisher</label>
+            <select class="form-select form-select-sm" id="fPublisher">
+                <option value="">All</option>
+                @foreach (var p in Model.Publishers)
+                {
+                    <option value="@p.PublisherId">@p.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2 col-sm-6">
+            <label class="form-label">Title / ISBN / Barcode</label>
+            <input type="text" class="form-control form-control-sm" id="fSearch" placeholder="Search..." />
+        </div>
+        <div class="col-md-2 col-sm-6">
+            <label class="form-label">Accession / CallNo / Dewey</label>
+            <input type="text" class="form-control form-control-sm" id="fAccCall" placeholder="Search..." />
+        </div>
+        <div class="col-md-2 col-sm-6">
+            <label class="form-label">Status</label>
+            <select class="form-select form-select-sm" id="fStatus">
+                <option value="">All</option>
+                <option>New Book</option>
+                <option>Old Book</option>
+                <option>Reference</option>
+                <option>Donated</option>
+            </select>
+        </div>
+        <div class="col-md-2 col-sm-6">
+            <label class="form-label">Page Size</label>
+            <select class="form-select form-select-sm" id="fPageSize">
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+        </div>
+        <div class="col-md-2 col-sm-6 d-flex gap-2">
+            <button class="btn btn-primary btn-sm flex-grow-1" id="btnSearch">
+                <i class="bi bi-search me-1"></i>Search
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" id="btnReset" title="Clear filters">
+                <i class="bi bi-x-circle"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Grid -->
+<div class="lms-grid-wrapper">
+    <div class="lms-grid-scroll" id="gridScroll">
+        <table class="lms-table" id="booksTable">
+            <thead>
+                <tr>
+                    <th style="width:60px"></th>
+                    <th>ISBN</th>
+                    <th>BarCode</th>
+                    <th style="min-width:200px">Title</th>
+                    <th>Author(s)</th>
+                    <th>Category(s)</th>
+                    <th>Publisher</th>
+                    <th style="width:45px;text-align:center">Qty</th>
+                    <th style="width:45px;text-align:center">Rem</th>
+                    <th style="width:45px;text-align:center">Issued</th>
+                    <th style="width:45px;text-align:center">Lost</th>
+                    <th>Rack Name</th>
+                    <th>Accession#</th>
+                    <th>CallNo/Dewey</th>
+                    <th>Remarks</th>
+                    <th style="width:90px;text-align:center">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="booksBody">
+                <tr><td colspan="16" class="text-center py-4 text-muted">
+                    <i class="bi bi-search me-2"></i>Click Search to load books.</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination + Footer Bar -->
+    <div class="lms-action-bar flex-wrap gap-2">
+        <span class="text-muted-sm" id="totalLabel">Total Books Listed: 0</span>
+        <div class="ms-auto d-flex align-items-center gap-2">
+            <button class="btn btn-outline-secondary btn-sm" id="btnPrevPage" disabled>
+                <i class="bi bi-chevron-left"></i>
+            </button>
+            <span class="text-muted-sm" id="pageLabel">Page 1</span>
+            <button class="btn btn-outline-secondary btn-sm" id="btnNextPage" disabled>
+                <i class="bi bi-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    var currentPage = 1;
+    var totalPages  = 1;
+    var totalCount  = 0;
+
+    function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    function getFilters() {
+        return {
+            bookTypeId:  $('#fBookType').val()  || null,
+            categoryId:  $('#fCategory').val()  || null,
+            authorId:    $('#fAuthor').val()    || null,
+            publisherId: $('#fPublisher').val() || null,
+            searchText:  $('#fSearch').val().trim()  || null,
+            accCallText: $('#fAccCall').val().trim() || null,
+            status:      $('#fStatus').val()    || null,
+            page:        currentPage,
+            pageSize:    parseInt($('#fPageSize').val()) || 20
+        };
+    }
+
+    function renderRow(b) {
+        var cover = b.coverImagePath
+            ? '<img src="' + esc(b.coverImagePath) + '" style="width:36px;height:44px;object-fit:cover;border-radius:3px;border:1px solid #e2e8f0">'
+            : '<div style="width:36px;height:44px;background:#f1f5f9;border-radius:3px;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center"><i class="bi bi-book text-muted" style="font-size:.7rem"></i></div>';
+
+        return '<tr>' +
+            '<td class="text-center">' + cover + '</td>' +
+            '<td class="text-muted-sm">' + esc(b.isbn||'') + '</td>' +
+            '<td class="text-muted-sm">' + esc(b.barCode||'') + '</td>' +
+            '<td><span class="fw-semibold">' + esc(b.title) + '</span></td>' +
+            '<td class="text-muted-sm">' + esc(b.authors||'') + '</td>' +
+            '<td><span class="lms-badge lms-badge-info">' + esc(b.categories||'') + '</span></td>' +
+            '<td class="text-muted-sm">' + esc(b.publisher||'') + '</td>' +
+            '<td class="text-center fw-semibold">' + b.totalQuantity + '</td>' +
+            '<td class="text-center">' +
+                '<span class="fw-semibold ' + (b.remainingQuantity === 0 ? 'text-danger' : 'text-success') + '">' + b.remainingQuantity + '</span>' +
+            '</td>' +
+            '<td class="text-center text-muted-sm">' + b.issuedCount + '</td>' +
+            '<td class="text-center text-muted-sm">' + b.lostCount + '</td>' +
+            '<td class="text-muted-sm">' + esc(b.rackName||'') + '</td>' +
+            '<td class="text-muted-sm">' + esc(b.accessionNumber||'') + '</td>' +
+            '<td class="text-muted-sm">' + esc(b.callNumberDeweyCode||'') + '</td>' +
+            '<td class="text-muted-sm" style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(b.librarianRemarks||'') + '">' + esc(b.librarianRemarks||'') + '</td>' +
+            '<td class="text-center">' +
+                '<a href="/Books/Edit/' + b.bookId + '" class="btn btn-sm btn-outline-primary me-1" title="Edit"><i class="bi bi-pencil"></i></a>' +
+                '<button class="btn btn-sm btn-outline-danger btn-del-book" data-id="' + b.bookId + '" title="Delete"><i class="bi bi-trash3"></i></button>' +
+            '</td>' +
+        '</tr>';
+    }
+
+    function loadBooks() {
+        var filters = getFilters();
+        $('#booksBody').html('<tr><td colspan="16" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading...</td></tr>');
+
+        $.get('/Books/GetPaged', filters, function(res) {
+            totalCount = res.totalCount;
+            var ps     = parseInt($('#fPageSize').val()) || 20;
+            totalPages = Math.max(1, Math.ceil(totalCount / ps));
+
+            if (!res.items || !res.items.length) {
+                $('#booksBody').html('<tr><td colspan="16" class="text-center py-4 text-muted"><i class="bi bi-inbox me-2"></i>No books found matching your filters.</td></tr>');
+            } else {
+                $('#booksBody').html(res.items.map(renderRow).join(''));
+            }
+
+            $('#totalLabel').text('Total Books Listed: ' + totalCount.toLocaleString());
+            $('#pageLabel').text('Page ' + currentPage + ' of ' + totalPages);
+            $('#btnPrevPage').prop('disabled', currentPage <= 1);
+            $('#btnNextPage').prop('disabled', currentPage >= totalPages);
+        });
+    }
+
+    // Search
+    $('#btnSearch').click(function() { currentPage = 1; loadBooks(); });
+    $('#fSearch, #fAccCall').on('keypress', function(e) { if (e.which === 13) { currentPage = 1; loadBooks(); } });
+
+    // Reset
+    $('#btnReset').click(function() {
+        $('#fBookType,#fCategory,#fAuthor,#fPublisher,#fStatus').val('');
+        $('#fSearch,#fAccCall').val('');
+        currentPage = 1;
+        loadBooks();
+    });
+
+    // Pagination
+    $('#btnPrevPage').click(function() { if (currentPage > 1) { currentPage--; loadBooks(); } });
+    $('#btnNextPage').click(function() { if (currentPage < totalPages) { currentPage++; loadBooks(); } });
+
+    // Delete
+    $(document).on('click', '.btn-del-book', function() {
+        var id = parseInt($(this).data('id'));
+        if (!confirmDelete('Delete this book? This cannot be undone.')) return;
+        var $btn = $(this).prop('disabled', true);
+        $.post('/Books/Delete', JSON.stringify(id), function(res) {
+            if (res.success) { showToast('Book deleted.'); loadBooks(); }
+            else { showToast(res.message || 'Could not delete.', 'error'); $btn.prop('disabled', false); }
+        }, 'json');
+    });
+
+    // Auto-load on page open
+    loadBooks();
+</script>
+}
