@@ -106,14 +106,14 @@ public class PurchaseService : IPurchaseService
 
                 oldItems = purchase.PurchaseItems.ToList();
 
-                // Reverse old quantity additions
+                // Reverse old quantity additions — floor at 0
                 foreach (var oi in oldItems.Where(i => i.BookId.HasValue))
                 {
                     var book = await _db.Books.FindAsync(oi.BookId!.Value);
                     if (book != null)
                     {
-                        book.TotalQuantity     -= oi.Quantity;
-                        book.RemainingQuantity -= oi.Quantity;
+                        book.TotalQuantity     = Math.Max(0, book.TotalQuantity     - oi.Quantity);
+                        book.RemainingQuantity = Math.Max(0, book.RemainingQuantity - oi.Quantity);
                     }
                 }
                 _db.PurchaseItems.RemoveRange(oldItems);

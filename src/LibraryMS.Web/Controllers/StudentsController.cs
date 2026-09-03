@@ -1,9 +1,11 @@
 using LibraryMS.Application.Interfaces;
 using LibraryMS.Application.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LibraryMS.Web.Controllers;
 
+[Authorize]
 public class StudentsController : Controller
 {
     private readonly IMemberService _svc;
@@ -51,6 +53,8 @@ public class StudentsController : Controller
     {
         ViewData["Title"] = "Edit Student";
         var vm = await _svc.GetStudentFormAsync(id);
+        if (vm.StudentId == 0)
+            return NotFound();
         return View("StudentForm", vm);
     }
 

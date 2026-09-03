@@ -1,0 +1,728 @@
+@model LibraryMS.Application.ViewModels.StudentViewModel
+@{
+    ViewData["Title"] = "Issue / Return Book Members";
+}
+
+<div class="lms-page-header">
+    <div>
+        <h4><i class="bi bi-arrow-left-right"></i> Issue / Return Book Members</h4>
+        <div class="header-subtitle">Search members then issue or return books.</div>
+    </div>
+</div>
+
+<div class="row g-3">
+
+    <!-- ══ Left: Filter Panel ════════════════════════════════════ -->
+    <div class="col-lg-3">
+        <div class="lms-card p-3">
+
+            <!-- Member Type Toggle -->
+            <div class="mb-3">
+                <div class="d-flex gap-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="memberType"
+                               id="rbStudent" value="Student" checked />
+                        <label class="form-check-label fw-semibold" for="rbStudent">Student</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="memberType"
+                               id="rbEmployee" value="Employee" />
+                        <label class="form-check-label fw-semibold" for="rbEmployee">Employee</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Student filters (hidden for Employee) -->
+            <div id="studentFilters">
+                <div class="mb-2">
+                    <label class="form-label">Session</label>
+                    <select class="form-select form-select-sm" id="fSession">
+                        <option value="">All Sessions</option>
+                        @foreach (var s in Model.Sessions)
+                        {
+                            <option value="@s.SessionId">@s.SessionName</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label">Class</label>
+                    <select class="form-select form-select-sm" id="fClass">
+                        <option value="">All Classes</option>
+                        @foreach (var c in Model.ClassLevels)
+                        {
+                            <option value="@c.ClassLevelId">@c.Name</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label">Section</label>
+                    <select class="form-select form-select-sm" id="fSection">
+                        <option value="">All Sections</option>
+                        @foreach (var s in Model.Sections)
+                        {
+                            <option value="@s.SectionId">@s.Name</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="mb-2 d-flex gap-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="chkAllClasses" />
+                        <label class="form-check-label form-label mb-0">All Classes</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="chkAllSections" />
+                        <label class="form-check-label form-label mb-0">All Sections</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active status -->
+            <div class="mb-2">
+                <label class="form-label">Status</label>
+                <div class="d-flex gap-3 flex-wrap">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="activeStatus"
+                               id="rbActive" value="Active" checked />
+                        <label class="form-check-label form-label mb-0" for="rbActive">Active</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="activeStatus"
+                               id="rbInactive" value="Inactive" />
+                        <label class="form-check-label form-label mb-0" for="rbInactive">Inactive</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="activeStatus"
+                               id="rbBoth" value="Both" />
+                        <label class="form-check-label form-label mb-0" for="rbBoth">Both</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search by -->
+            <div class="mb-2">
+                <label class="form-label">Search By</label>
+                <select class="form-select form-select-sm" id="fSearchBy">
+                    <option value="Name">By Name</option>
+                    <option value="RegistrationNo">By Registration No</option>
+                    <option value="RollNo">By Roll No</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <input type="text" class="form-control form-control-sm" id="fSearchTerm"
+                       placeholder="Enter keyword..." />
+            </div>
+
+            <button class="btn btn-primary btn-sm w-100" id="btnSearchMembers">
+                <i class="bi bi-search me-1"></i> Search Member(s)
+            </button>
+
+            <!-- Divider -->
+            <hr class="my-3" />
+
+            <!-- Bulk Issue Section -->
+            <div class="fw-bold mb-2" style="color:var(--lms-primary-dark);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em">
+                <i class="bi bi-people-fill me-1"></i> Bulk Issue
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label">Book to Issue</label>
+                <div class="position-relative">
+                    <input type="text" class="form-control form-control-sm" id="bulkBookSearch"
+                           placeholder="Search book..." autocomplete="off" />
+                    <div id="bulkSuggestions" class="suggestions-dropdown" style="display:none"></div>
+                </div>
+                <input type="hidden" id="bulkBookId" />
+                <div class="text-muted-sm mt-1" id="bulkBookName"></div>
+            </div>
+
+            <div class="mb-2">
+                <label class="form-label">Due Date</label>
+                <input type="date" class="form-control form-control-sm" id="bulkDueDate"
+                       value="@DateTime.Today.AddDays(14).ToString("yyyy-MM-dd")" />
+            </div>
+
+            <button class="btn btn-warning btn-sm w-100 fw-semibold" id="btnBulkIssue">
+                <i class="bi bi-people me-1"></i> Issue Book to all Class
+            </button>
+        </div>
+    </div>
+
+    <!-- ══ Right: Members Grid ════════════════════════════════════ -->
+    <div class="col-lg-9">
+        <div class="lms-grid-wrapper">
+            <div class="lms-grid-scroll" id="memberGridScroll">
+                <table class="lms-table">
+                    <thead>
+                        <tr>
+                            <th>Student / Employee Name</th>
+                            <th style="width:14%">Registration No</th>
+                            <th style="width:8%">Roll No</th>
+                            <th style="width:10%;text-align:center">Issue Book</th>
+                            <th style="width:12%;text-align:center">Return Books</th>
+                            <th style="width:12%;text-align:center">Issued Detail</th>
+                        </tr>
+                    </thead>
+                    <tbody id="memberBody">
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">
+                                <i class="bi bi-search me-2"></i>
+                                Set filters and click <strong>Search Member(s)</strong>.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="lms-action-bar">
+                <span class="text-muted-sm" id="memberCount"></span>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ══ Issue Book Modal ═══════════════════════════════════════════ -->
+<div class="modal fade" id="issueModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:12px;overflow:hidden">
+            <div class="modal-header border-0 text-white"
+                 style="background:linear-gradient(135deg,#1e3a8a,#1e40af);padding:14px 20px">
+                <h6 class="modal-title fw-bold mb-0">
+                    <i class="bi bi-book me-2"></i>Issue Book
+                    <small class="opacity-75 ms-2" id="issueMemberName"></small>
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="issueMemberId" />
+                <input type="hidden" id="issueMemberType" />
+
+                <!-- Book Search -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-8">
+                        <label class="form-label">Search Book <span class="text-danger">*</span></label>
+                        <div class="position-relative">
+                            <input type="text" class="form-control" id="issueBookSearch"
+                                   placeholder="Type book title or ISBN..." autocomplete="off" />
+                            <div id="issueSuggestions" class="suggestions-dropdown" style="display:none"></div>
+                        </div>
+                        <input type="hidden" id="issueBookId" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Due Date</label>
+                        <input type="date" class="form-control" id="issueDueDate"
+                               value="@DateTime.Today.AddDays(14).ToString("yyyy-MM-dd")" />
+                    </div>
+                </div>
+
+                <!-- Selected Book Info -->
+                <div id="issueBookInfo" class="lms-card p-3 mb-3" style="display:none">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="tile-icon" style="width:48px;height:48px;background:#eff6ff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:var(--lms-primary)">
+                            <i class="bi bi-book-fill"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold" id="issueBookTitle"></div>
+                            <div class="text-muted-sm" id="issueBookISBN"></div>
+                            <div class="mt-1">
+                                <span class="lms-badge" id="issueBookStock"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Notes (optional)</label>
+                    <input type="text" class="form-control" id="issueNotes"
+                           placeholder="Optional notes..." />
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3 gap-2">
+                <button class="btn-lms-primary" id="btnConfirmIssue">
+                    <i class="bi bi-check-circle-fill"></i> Confirm Issue
+                </button>
+                <button class="btn-lms-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i> Cancel
+                </button>
+                <span class="text-danger small ms-2" id="issueError"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ Return Books Modal ════════════════════════════════════════ -->
+<div class="modal fade" id="returnModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:12px;overflow:hidden">
+            <div class="modal-header border-0 text-white"
+                 style="background:linear-gradient(135deg,#065f46,#059669);padding:14px 20px">
+                <h6 class="modal-title fw-bold mb-0">
+                    <i class="bi bi-arrow-return-left me-2"></i>Return Books
+                    <small class="opacity-75 ms-2" id="returnMemberName"></small>
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-3">
+                <input type="hidden" id="returnMemberId" />
+                <input type="hidden" id="returnMemberType" />
+                <div id="returnBooksList">
+                    <div class="text-center py-3 text-muted">
+                        <div class="spinner-border spinner-border-sm me-2"></div>Loading...
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3 gap-2">
+                <button class="btn-lms-success" id="btnConfirmReturn">
+                    <i class="bi bi-arrow-return-left"></i> Return Selected
+                </button>
+                <button class="btn-lms-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i> Close
+                </button>
+                <span class="text-muted-sm ms-2" id="returnStatus"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ Issued Detail Modal ═══════════════════════════════════════ -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:12px;overflow:hidden">
+            <div class="modal-header border-0 text-white"
+                 style="background:linear-gradient(135deg,#1e3a8a,#1e40af);padding:14px 20px">
+                <h6 class="modal-title fw-bold mb-0">
+                    <i class="bi bi-journals me-2"></i>Issued Books Detail
+                    <small class="opacity-75 ms-2" id="detailMemberName"></small>
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div id="detailBooksList"></div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3">
+                <button class="btn-lms-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // ── Modal instances ───────────────────────────────────────────
+    var issueModal  = new bootstrap.Modal(document.getElementById('issueModal'));
+    var returnModal = new bootstrap.Modal(document.getElementById('returnModal'));
+    var detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
+
+    // ── State ─────────────────────────────────────────────────────
+    var currentMembers = [];  // last search results (for bulk issue)
+
+    function esc(s) {
+        return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function fmtDate(d) {
+        if (!d) return '';
+        var dt = new Date(d);
+        return dt.getDate().toString().padStart(2,'0') + '/' +
+               (dt.getMonth()+1).toString().padStart(2,'0') + '/' + dt.getFullYear();
+    }
+
+    // ══ Member type toggle ════════════════════════════════════════
+    $('input[name="memberType"]').on('change', function() {
+        var isStudent = $(this).val() === 'Student';
+        $('#studentFilters').toggle(isStudent);
+        $('#fSearchBy option[value="RollNo"]').toggle(isStudent);
+        $('#fSearchBy option[value="RegistrationNo"]').toggle(isStudent);
+        if (!isStudent) $('#fSearchBy').val('Name');
+    });
+
+    // Class cascade
+    $('#fClass').on('change', function() {
+        var cid = $(this).val();
+        $('#fSection').html('<option value="">All Sections</option>');
+        if (!cid) return;
+        $.get('/IssueReturn/GetSections', { classLevelId: cid }, function(data) {
+            data.forEach(function(s) {
+                $('#fSection').append('<option value="' + s.sectionId + '">' + esc(s.name) + '</option>');
+            });
+        });
+    });
+
+    // All Classes / All Sections checkboxes
+    $('#chkAllClasses').on('change', function() {
+        $('#fClass').prop('disabled', this.checked).val('');
+        $('#fSection').prop('disabled', this.checked).html('<option value="">All Sections</option>');
+        $('#chkAllSections').prop('checked', this.checked);
+    });
+    $('#chkAllSections').on('change', function() {
+        $('#fSection').prop('disabled', this.checked).val('');
+    });
+
+    // ══ Search members ════════════════════════════════════════════
+    function searchMembers() {
+        var memberType = $('input[name="memberType"]:checked').val();
+        var payload = {
+            memberType:   memberType,
+            sessionId:    parseInt($('#fSession').val())  || null,
+            classLevelId: parseInt($('#fClass').val())    || null,
+            sectionId:    parseInt($('#fSection').val())  || null,
+            activeStatus: $('input[name="activeStatus"]:checked').val(),
+            searchBy:     $('#fSearchBy').val(),
+            searchTerm:   $('#fSearchTerm').val().trim() || null
+        };
+
+        if ($('#chkAllClasses').is(':checked')) { payload.classLevelId = null; payload.sectionId = null; }
+        if ($('#chkAllSections').is(':checked')) payload.sectionId = null;
+
+        $('#memberBody').html('<tr><td colspan="6" class="text-center py-3">' +
+            '<div class="spinner-border spinner-border-sm text-primary me-2"></div>Searching...</td></tr>');
+
+        $.ajax({
+            url: '/IssueReturn/SearchMembers', type: 'POST', contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function(res) {
+                currentMembers = res;
+                if (!res.length) {
+                    $('#memberBody').html('<tr><td colspan="6" class="text-center py-4 text-muted">' +
+                        '<i class="bi bi-inbox me-2"></i>No members found.</td></tr>');
+                    $('#memberCount').text('0 members');
+                    return;
+                }
+                var html = res.map(function(m) {
+                    var issuedBadge = m.issuedBooksCount > 0
+                        ? '<span class="lms-badge lms-badge-info ms-2">' + m.issuedBooksCount + ' issued</span>'
+                        : '';
+                    return '<tr data-id="' + m.memberId + '" data-type="' + m.memberType + '" data-name="' + esc(m.name) + '">' +
+                        '<td><strong>' + esc(m.name) + '</strong>' + issuedBadge +
+                            (m.classLevel ? '<br><span class="text-muted-sm">' + esc(m.classLevel) +
+                                (m.section ? ' — ' + esc(m.section) : '') + '</span>' : '') +
+                        '</td>' +
+                        '<td class="text-muted-sm">' + esc(m.registrationNo||'') + '</td>' +
+                        '<td class="text-muted-sm">' + esc(m.rollNo||'') + '</td>' +
+                        '<td class="text-center">' +
+                            '<button class="btn btn-sm btn-outline-primary btn-issue-book" ' +
+                                'data-id="' + m.memberId + '" data-type="' + m.memberType + '" ' +
+                                'data-name="' + esc(m.name) + '" title="Issue Book">' +
+                                '<i class="bi bi-book-fill"></i> Issue' +
+                            '</button>' +
+                        '</td>' +
+                        '<td class="text-center">' +
+                            '<button class="btn btn-sm btn-outline-success btn-return-books" ' +
+                                'data-id="' + m.memberId + '" data-type="' + m.memberType + '" ' +
+                                'data-name="' + esc(m.name) + '" title="Return Books"' +
+                                (m.issuedBooksCount === 0 ? ' disabled' : '') + '>' +
+                                '<i class="bi bi-arrow-return-left"></i> Return' +
+                            '</button>' +
+                        '</td>' +
+                        '<td class="text-center">' +
+                            '<button class="btn btn-sm btn-outline-secondary btn-issued-detail" ' +
+                                'data-id="' + m.memberId + '" data-type="' + m.memberType + '" ' +
+                                'data-name="' + esc(m.name) + '" title="View issued books"' +
+                                (m.issuedBooksCount === 0 ? ' disabled' : '') + '>' +
+                                '<i class="bi bi-journals"></i> Detail' +
+                            '</button>' +
+                        '</td>' +
+                        '</tr>';
+                }).join('');
+                $('#memberBody').html(html);
+                $('#memberCount').text(res.length + ' member(s) found');
+            }
+        });
+    }
+
+    $('#btnSearchMembers').click(searchMembers);
+    $('#fSearchTerm').on('keypress', function(e) { if (e.which === 13) searchMembers(); });
+
+    // ══ Issue Book ════════════════════════════════════════════════
+    $(document).on('click', '.btn-issue-book', function() {
+        var id   = $(this).data('id');
+        var type = $(this).data('type');
+        var name = $(this).data('name');
+
+        $('#issueMemberId').val(id);
+        $('#issueMemberType').val(type);
+        $('#issueMemberName').text('— ' + name);
+        $('#issueBookSearch').val('');
+        $('#issueBookId').val('');
+        $('#issueBookInfo').hide();
+        $('#issueError').text('');
+        $('#issueNotes').val('');
+        $('#issueDueDate').val('@DateTime.Today.AddDays(14).ToString("yyyy-MM-dd")');
+        issueModal.show();
+        setTimeout(function() { $('#issueBookSearch').focus(); }, 400);
+    });
+
+    // Book search autocomplete in issue modal
+    var issueTimer;
+    $('#issueBookSearch').on('input', function() {
+        clearTimeout(issueTimer);
+        var kw = $(this).val().trim();
+        if (kw.length < 2) { $('#issueSuggestions').hide(); return; }
+        issueTimer = setTimeout(function() {
+            $.get('/IssueReturn/SearchBooks', { keyword: kw }, function(res) {
+                var $s = $('#issueSuggestions').empty();
+                if (!res.length) { $s.hide(); return; }
+                res.forEach(function(b) {
+                    var stockClass = b.remainingQuantity === 0 ? 'text-danger' : 'text-success';
+                    $s.append(
+                        '<div class="suggestion-item" ' +
+                        'data-id="' + b.bookId + '" ' +
+                        'data-title="' + esc(b.title) + '" ' +
+                        'data-isbn="' + esc(b.isbn||'') + '" ' +
+                        'data-stock="' + b.remainingQuantity + '">' +
+                        '<strong>' + esc(b.title) + '</strong>' +
+                        '<small class="text-muted ms-2">' + esc(b.isbn||'') + '</small>' +
+                        '<span class="float-end ' + stockClass + ' small fw-bold">' +
+                            b.remainingQuantity + ' in stock</span>' +
+                        '</div>'
+                    );
+                });
+                $s.show();
+            });
+        }, 250);
+    });
+
+    $(document).on('click', '#issueSuggestions .suggestion-item', function() {
+        var id    = $(this).data('id');
+        var title = $(this).data('title');
+        var isbn  = $(this).data('isbn');
+        var stock = parseInt($(this).data('stock'));
+
+        $('#issueBookId').val(id);
+        $('#issueBookSearch').val(title);
+        $('#issueSuggestions').hide();
+        $('#issueBookTitle').text(title);
+        $('#issueBookISBN').text(isbn ? 'ISBN: ' + isbn : '');
+
+        var stockBadge = stock > 0
+            ? '<span class="lms-badge lms-badge-active">' + stock + ' copies available</span>'
+            : '<span class="lms-badge lms-badge-inactive">No copies available</span>';
+        $('#issueBookStock').html(stockBadge);
+        $('#issueBookInfo').show();
+        $('#issueError').text('');
+    });
+
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('#issueBookSearch, #issueSuggestions').length)
+            $('#issueSuggestions').hide();
+        if (!$(e.target).closest('#bulkBookSearch, #bulkSuggestions').length)
+            $('#bulkSuggestions').hide();
+    });
+
+    // Confirm issue
+    $('#btnConfirmIssue').click(function() {
+        var bookId = parseInt($('#issueBookId').val());
+        if (!bookId) { $('#issueError').text('Please select a book.'); return; }
+
+        var payload = {
+            bookId:     bookId,
+            memberType: $('#issueMemberType').val(),
+            memberId:   parseInt($('#issueMemberId').val()),
+            dueDate:    $('#issueDueDate').val(),
+            notes:      $('#issueNotes').val() || null
+        };
+
+        var $btn = $(this).prop('disabled', true).html('<i class="bi bi-hourglass-split me-1"></i>Issuing...');
+        $.ajax({
+            url: '/IssueReturn/IssueBook', type: 'POST', contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function(res) {
+                $btn.prop('disabled', false).html('<i class="bi bi-check-circle-fill me-1"></i>Confirm Issue');
+                if (res.success) {
+                    issueModal.hide();
+                    showToast('Book issued successfully. Issue No: ' + res.data.issueNo);
+                    searchMembers();  // refresh member list
+                } else {
+                    $('#issueError').text(res.message);
+                }
+            }
+        });
+    });
+
+    // ══ Return Books ══════════════════════════════════════════════
+    $(document).on('click', '.btn-return-books', function() {
+        var id   = $(this).data('id');
+        var type = $(this).data('type');
+        var name = $(this).data('name');
+
+        $('#returnMemberId').val(id);
+        $('#returnMemberType').val(type);
+        $('#returnMemberName').text('— ' + name);
+        $('#returnStatus').text('');
+        $('#returnBooksList').html(
+            '<div class="text-center py-3 text-muted">' +
+            '<div class="spinner-border spinner-border-sm me-2"></div>Loading...</div>');
+        returnModal.show();
+
+        $.get('/IssueReturn/GetIssuedBooks', { memberType: type, memberId: id }, function(res) {
+            if (!res.length) {
+                $('#returnBooksList').html(
+                    '<div class="text-center py-3 text-muted">' +
+                    '<i class="bi bi-inbox me-2"></i>No books currently issued.</div>');
+                return;
+            }
+            var html = '<div class="table-responsive"><table class="lms-table">' +
+                '<thead><tr>' +
+                '<th style="width:40px"><input type="checkbox" id="chkSelectAll" class="grid-checkbox" /></th>' +
+                '<th>Book Title</th><th>ISBN</th>' +
+                '<th style="width:100px">Issue Date</th>' +
+                '<th style="width:100px">Due Date</th>' +
+                '<th style="width:80px">Status</th>' +
+                '</tr></thead><tbody>';
+
+            res.forEach(function(b) {
+                var overdue = b.isOverdue
+                    ? '<span class="lms-badge lms-badge-inactive">Overdue ' + b.daysOverdue + 'd</span>'
+                    : '<span class="lms-badge lms-badge-active">On time</span>';
+                html += '<tr>' +
+                    '<td><input type="checkbox" class="grid-checkbox chk-return" value="' + b.issuedBookId + '" /></td>' +
+                    '<td><strong>' + esc(b.bookTitle) + '</strong></td>' +
+                    '<td class="text-muted-sm">' + esc(b.isbn||'') + '</td>' +
+                    '<td class="text-muted-sm">' + fmtDate(b.issueDate) + '</td>' +
+                    '<td class="text-muted-sm ' + (b.isOverdue ? 'text-danger fw-bold' : '') + '">' + fmtDate(b.dueDate) + '</td>' +
+                    '<td>' + overdue + '</td>' +
+                    '</tr>';
+            });
+
+            html += '</tbody></table></div>';
+            $('#returnBooksList').html(html);
+
+            // Select all toggle
+            $('#chkSelectAll').on('change', function() {
+                $('.chk-return').prop('checked', this.checked);
+            });
+        });
+    });
+
+    $('#btnConfirmReturn').click(function() {
+        var ids = [];
+        $('.chk-return:checked').each(function() { ids.push(parseInt($(this).val())); });
+        if (!ids.length) { showToast('Select at least one book to return.', 'info'); return; }
+
+        var $btn = $(this).prop('disabled', true).html('<i class="bi bi-hourglass-split me-1"></i>Returning...');
+        $.ajax({
+            url: '/IssueReturn/ReturnBooks', type: 'POST', contentType: 'application/json',
+            data: JSON.stringify({ issuedBookIds: ids }),
+            success: function(res) {
+                $btn.prop('disabled', false).html('<i class="bi bi-arrow-return-left me-1"></i>Return Selected');
+                if (res.success) {
+                    returnModal.hide();
+                    showToast(ids.length + ' book(s) returned successfully.');
+                    searchMembers();
+                } else {
+                    showToast(res.message, 'error');
+                }
+            }
+        });
+    });
+
+    // ══ Issued Detail ═════════════════════════════════════════════
+    $(document).on('click', '.btn-issued-detail', function() {
+        var id   = $(this).data('id');
+        var type = $(this).data('type');
+        var name = $(this).data('name');
+
+        $('#detailMemberName').text('— ' + name);
+        $('#detailBooksList').html(
+            '<div class="text-center py-3"><div class="spinner-border spinner-border-sm me-2"></div>Loading...</div>');
+        detailModal.show();
+
+        $.get('/IssueReturn/GetIssuedBooks', { memberType: type, memberId: id }, function(res) {
+            if (!res.length) {
+                $('#detailBooksList').html(
+                    '<div class="text-center py-3 text-muted">' +
+                    '<i class="bi bi-inbox me-2"></i>No books currently issued to this member.</div>');
+                return;
+            }
+            var html = '<div class="table-responsive"><table class="lms-table">' +
+                '<thead><tr>' +
+                '<th>Issue No</th><th>Book Title</th><th>ISBN</th>' +
+                '<th>Issue Date</th><th>Due Date</th><th>Status</th>' +
+                '</tr></thead><tbody>';
+            res.forEach(function(b) {
+                var status = b.isOverdue
+                    ? '<span class="lms-badge lms-badge-inactive">Overdue ' + b.daysOverdue + 'd</span>'
+                    : '<span class="lms-badge lms-badge-active">On time</span>';
+                html += '<tr>' +
+                    '<td class="text-muted-sm">' + esc(b.issueNo) + '</td>' +
+                    '<td><strong>' + esc(b.bookTitle) + '</strong></td>' +
+                    '<td class="text-muted-sm">' + esc(b.isbn||'') + '</td>' +
+                    '<td class="text-muted-sm">' + fmtDate(b.issueDate) + '</td>' +
+                    '<td class="text-muted-sm">' + fmtDate(b.dueDate) + '</td>' +
+                    '<td>' + status + '</td>' +
+                    '</tr>';
+            });
+            html += '</tbody></table></div>';
+            $('#detailBooksList').html(html);
+        });
+    });
+
+    // ══ Bulk Issue ════════════════════════════════════════════════
+    var bulkTimer;
+    $('#bulkBookSearch').on('input', function() {
+        clearTimeout(bulkTimer);
+        var kw = $(this).val().trim();
+        $('#bulkBookId').val('');
+        $('#bulkBookName').text('');
+        if (kw.length < 2) { $('#bulkSuggestions').hide(); return; }
+        bulkTimer = setTimeout(function() {
+            $.get('/IssueReturn/SearchBooks', { keyword: kw }, function(res) {
+                var $s = $('#bulkSuggestions').empty();
+                if (!res.length) { $s.hide(); return; }
+                res.forEach(function(b) {
+                    $s.append(
+                        '<div class="suggestion-item" ' +
+                        'data-id="' + b.bookId + '" ' +
+                        'data-title="' + esc(b.title) + '" ' +
+                        'data-stock="' + b.remainingQuantity + '">' +
+                        '<strong>' + esc(b.title) + '</strong>' +
+                        '<span class="float-end small ' + (b.remainingQuantity > 0 ? 'text-success' : 'text-danger') + ' fw-bold">' +
+                            b.remainingQuantity + ' in stock</span>' +
+                        '</div>'
+                    );
+                });
+                $s.show();
+            });
+        }, 250);
+    });
+
+    $(document).on('click', '#bulkSuggestions .suggestion-item', function() {
+        $('#bulkBookId').val($(this).data('id'));
+        $('#bulkBookSearch').val($(this).data('title'));
+        $('#bulkBookName').html('<span class="lms-badge lms-badge-info">' +
+            $(this).data('stock') + ' copies available</span>');
+        $('#bulkSuggestions').hide();
+    });
+
+    $('#btnBulkIssue').click(function() {
+        var bookId = parseInt($('#bulkBookId').val());
+        if (!bookId) { showToast('Search and select a book first.', 'info'); return; }
+        if (!currentMembers.length) { showToast('Search members first.', 'info'); return; }
+
+        var dueDate = $('#bulkDueDate').val();
+        var count   = currentMembers.length;
+
+        if (!confirm('Issue this book to all ' + count + ' member(s) in the current results?')) return;
+
+        var $btn = $(this).prop('disabled', true).html('<i class="bi bi-hourglass-split me-1"></i>Issuing...');
+        $.ajax({
+            url: '/IssueReturn/BulkIssue', type: 'POST', contentType: 'application/json',
+            data: JSON.stringify({ bookId: bookId, dueDate: dueDate, members: currentMembers }),
+            success: function(res) {
+                $btn.prop('disabled', false).html('<i class="bi bi-people me-1"></i>Issue Book to all Class');
+                if (res.success) {
+                    showToast(res.message);
+                    searchMembers();
+                } else {
+                    showToast(res.message, 'error');
+                }
+            }
+        });
+    });
+</script>
+}

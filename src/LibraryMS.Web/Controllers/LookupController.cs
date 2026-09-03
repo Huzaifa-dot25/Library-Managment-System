@@ -1,5 +1,6 @@
 using LibraryMS.Application.Interfaces;
 using LibraryMS.Application.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LibraryMS.Web.Controllers;
@@ -8,6 +9,7 @@ namespace LibraryMS.Web.Controllers;
 /// Compact admin pages for Sessions, ClassLevels, and Sections.
 /// All CRUD via AJAX inline grids.
 /// </summary>
+[Authorize(Roles = "Admin")]
 public class LookupController : Controller
 {
     private readonly IMemberService _svc;

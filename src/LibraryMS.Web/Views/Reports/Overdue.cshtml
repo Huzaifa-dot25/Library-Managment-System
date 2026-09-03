@@ -1,0 +1,71 @@
+@{ ViewData["Title"] = "Overdue Books Report"; }
+
+<div class="lms-page-header">
+    <div>
+        <h4><i class="bi bi-exclamation-triangle-fill text-danger"></i> Overdue Books Report</h4>
+        <div class="header-subtitle">Books not returned past due date. <span class="text-muted-sm">PDF/Excel export — TODO</span></div>
+    </div>
+</div>
+
+<div class="lms-card p-3 mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-2">
+            <label class="form-label">Min Days Overdue</label>
+            <input type="number" class="form-control form-control-sm" id="fDays" value="1" min="0" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Member Type</label>
+            <select class="form-select form-select-sm" id="fType">
+                <option value="All">All</option>
+                <option value="Students">Students</option>
+                <option value="Employees">Employees</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-danger btn-sm w-100" id="btnSearch">
+                <i class="bi bi-funnel-fill me-1"></i>Generate
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="lms-grid-wrapper">
+    <div class="lms-grid-scroll" style="max-height:calc(100vh - 280px)">
+        <table class="lms-table">
+            <thead>
+                <tr>
+                    <th>Issue #</th><th class="text-center">Days Overdue</th>
+                    <th>Member Type</th><th>Member Name</th><th>Reg #</th>
+                    <th>Book Title</th><th>Issue Date</th><th>Due Date</th>
+                </tr>
+            </thead>
+            <tbody id="gridBody">
+                <tr><td colspan="8" class="text-center py-4 text-muted">Click <strong>Generate</strong> to load.</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="lms-action-bar">
+        <span class="text-muted-sm" id="resultCount"></span>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+    function fmtDate(d){if(!d)return'';var dt=new Date(d);return dt.getDate().toString().padStart(2,'0')+'/'+(dt.getMonth()+1).toString().padStart(2,'0')+'/'+dt.getFullYear();}
+    $('#btnSearch').click(function(){
+        var payload={daysPassed:parseInt($('#fDays').val())||1,memberType:$('#fType').val()};
+        $('#gridBody').html('<tr><td colspan="8" class="text-center py-3"><div class="spinner-border spinner-border-sm text-danger me-2"></div>Loading...</td></tr>');
+        $.ajax({url:'/Reports/OverdueData',type:'POST',contentType:'application/json',data:JSON.stringify(payload),
+            success:function(res){
+                if(!res.length){$('#gridBody').html('<tr><td colspan="8" class="text-center py-4 text-muted"><i class="bi bi-check-circle-fill text-success me-2"></i>No overdue books.</td></tr>');$('#resultCount').text('0');return;}
+                var html=res.map(function(r){
+                    return '<tr><td class="text-muted-sm fw-semibold">'+esc(r.issueNo)+'</td><td class="text-center"><span class="lms-badge lms-badge-inactive">'+r.daysOverdue+' days</span></td><td><span class="lms-badge '+(r.memberType==='Student'?'lms-badge-info':'lms-badge-active')+'">'+r.memberType+'</span></td><td><strong>'+esc(r.memberName)+'</strong></td><td class="text-muted-sm">'+esc(r.registrationNo||'')+'</td><td>'+esc(r.bookTitle)+'</td><td class="text-muted-sm">'+fmtDate(r.issueDate)+'</td><td class="text-danger fw-bold">'+fmtDate(r.dueDate)+'</td></tr>';
+                }).join('');
+                $('#gridBody').html(html);$('#resultCount').text(res.length+' record(s)');
+            }
+        });
+    });
+    $('#btnSearch').click();
+</script>
+}

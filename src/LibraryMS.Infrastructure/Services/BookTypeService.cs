@@ -68,6 +68,11 @@ public class BookTypeService : IBookTypeService
     {
         var entity = await _db.BookTypes.FindAsync(id);
         if (entity == null) return false;
+        bool inUse = await _db.Books.AnyAsync(b => b.BookTypeId == id);
+        if (inUse)
+            throw new InvalidOperationException(
+                "Cannot delete this book type because it is assigned to one or more books. " +
+                "Update those books first.");
         _db.BookTypes.Remove(entity);
         await _db.SaveChangesAsync();
         return true;

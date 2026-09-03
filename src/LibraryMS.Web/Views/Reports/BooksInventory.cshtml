@@ -1,0 +1,118 @@
+@model LibraryMS.Application.ViewModels.BookFormViewModel
+@{
+    ViewData["Title"] = "Books Inventory Report";
+}
+
+<div class="lms-page-header">
+    <div>
+        <h4><i class="bi bi-database"></i> Books Inventory Report</h4>
+        <div class="header-subtitle">Full catalog with stock levels. <span class="text-muted-sm">PDF/Excel export — TODO</span></div>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="lms-card p-3 mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-2">
+            <label class="form-label">Library Type</label>
+            <select class="form-select form-select-sm" id="fBookType">
+                <option value="">All</option>
+                @foreach (var bt in Model.BookTypes) { <option value="@bt.BookTypeId">@bt.TypeName</option> }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Category</label>
+            <select class="form-select form-select-sm" id="fCategory">
+                <option value="">All</option>
+                @foreach (var c in Model.Categories) { <option value="@c.CategoryId">@c.Name</option> }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Title / ISBN / Barcode</label>
+            <input type="text" class="form-control form-control-sm" id="fSearch" placeholder="Search..." />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Status</label>
+            <select class="form-select form-select-sm" id="fStatus">
+                <option value="">All</option>
+                <option>New Book</option><option>Old Book</option>
+                <option>Reference</option><option>Donated</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-primary btn-sm w-100" id="btnSearch">
+                <i class="bi bi-search me-1"></i>Generate Report
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="lms-grid-wrapper">
+    <div class="lms-grid-scroll" style="max-height:calc(100vh - 280px)">
+        <table class="lms-table">
+            <thead>
+                <tr>
+                    <th>#</th><th>ISBN</th><th>Title</th><th>Author(s)</th>
+                    <th>Category</th><th>Publisher</th><th>Type</th>
+                    <th class="text-center">Total</th>
+                    <th class="text-center">Remaining</th>
+                    <th class="text-center">Issued</th>
+                    <th class="text-center">Lost</th>
+                    <th>Rack</th>
+                </tr>
+            </thead>
+            <tbody id="gridBody">
+                <tr><td colspan="12" class="text-center py-4 text-muted">
+                    Click <strong>Generate Report</strong> to load data.</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="lms-action-bar">
+        <span class="text-muted-sm" id="resultCount"></span>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+    $('#btnSearch').click(function() {
+        var payload = {
+            bookTypeId:  $('#fBookType').val()  || null,
+            categoryId:  $('#fCategory').val()  || null,
+            searchText:  $('#fSearch').val().trim() || null,
+            status:      $('#fStatus').val()    || null,
+            page: 1, pageSize: 1000
+        };
+        $('#gridBody').html('<tr><td colspan="12" class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading...</td></tr>');
+        $.ajax({ url:'/Reports/BooksInventoryData', type:'POST', contentType:'application/json',
+            data: JSON.stringify(payload),
+            success: function(res) {
+                if (!res.length) {
+                    $('#gridBody').html('<tr><td colspan="12" class="text-center py-4 text-muted"><i class="bi bi-inbox me-2"></i>No records.</td></tr>');
+                    $('#resultCount').text('0 books');
+                    return;
+                }
+                var html = res.map(function(b, i) {
+                    var remClass = b.remainingQuantity === 0 ? 'text-danger fw-bold' : 'text-success fw-bold';
+                    return '<tr><td class="text-muted-sm">'+(i+1)+'</td>' +
+                        '<td class="text-muted-sm">'+esc(b.isbn||'')+'</td>' +
+                        '<td><strong>'+esc(b.title)+'</strong></td>' +
+                        '<td class="text-muted-sm">'+esc(b.authors||'')+'</td>' +
+                        '<td class="text-muted-sm">'+esc(b.categories||'')+'</td>' +
+                        '<td class="text-muted-sm">'+esc(b.publisher||'')+'</td>' +
+                        '<td class="text-muted-sm">'+esc(b.bookType||'')+'</td>' +
+                        '<td class="text-center fw-semibold">'+b.totalQuantity+'</td>' +
+                        '<td class="text-center '+remClass+'">'+b.remainingQuantity+'</td>' +
+                        '<td class="text-center text-muted-sm">'+b.issuedCount+'</td>' +
+                        '<td class="text-center text-muted-sm">'+b.lostCount+'</td>' +
+                        '<td class="text-muted-sm">'+esc(b.rackName||'')+'</td>' +
+                        '</tr>';
+                }).join('');
+                $('#gridBody').html(html);
+                $('#resultCount').text(res.length + ' book(s)');
+            }
+        });
+    });
+    $('#fSearch').on('keypress', function(e){ if(e.which===13) $('#btnSearch').click(); });
+</script>
+}

@@ -196,7 +196,19 @@ public class BookService : IBookService
         book.CallNumberDeweyCode = vm.CallNumberDeweyCode?.Trim();
         book.Price               = vm.Price;
         book.TotalQuantity       = vm.TotalQuantity;
-        book.RemainingQuantity   = vm.TotalQuantity;   // initial stock = total
+        // Only set RemainingQuantity on new books.
+        // On edits preserve the current remaining quantity and just adjust for
+        // the delta in TotalQuantity (e.g. librarian increases stock).
+        if (vm.BookId == 0)
+        {
+            book.RemainingQuantity = vm.TotalQuantity;
+        }
+        else
+        {
+            // Delta: if TotalQuantity was increased by N, add N to remaining.
+            int delta = vm.TotalQuantity - book.TotalQuantity;
+            book.RemainingQuantity = Math.Max(0, book.RemainingQuantity + delta);
+        }
         book.RackName            = vm.RackName?.Trim();
         book.LibrarianRemarks    = vm.LibrarianRemarks?.Trim();
 
@@ -236,6 +248,12 @@ public class BookService : IBookService
     {
         var b = await _db.Books.FindAsync(id);
         if (b == null) return false;
+        bool hasActiveIssues = await _db.IssuedBooks
+            .AnyAsync(i => i.BookId == id && i.ReturnDate == null);
+        if (hasActiveIssues)
+            throw new InvalidOperationException(
+                "Cannot delete this book because it currently has copies issued out. " +
+                "Return all copies first.");
         _db.Books.Remove(b);
         await _db.SaveChangesAsync();
         return true;

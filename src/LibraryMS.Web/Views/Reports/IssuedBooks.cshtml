@@ -1,0 +1,80 @@
+@{ ViewData["Title"] = "Issued Books Report"; }
+
+<div class="lms-page-header">
+    <div>
+        <h4><i class="bi bi-journal-check"></i> Issued Books Report</h4>
+        <div class="header-subtitle">All issued book records. <span class="text-muted-sm">PDF/Excel export — TODO</span></div>
+    </div>
+</div>
+
+<div class="lms-card p-3 mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-2">
+            <label class="form-label">From Date</label>
+            <input type="date" class="form-control form-control-sm" id="fFrom" value="@DateTime.Today.AddMonths(-1).ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">To Date</label>
+            <input type="date" class="form-control form-control-sm" id="fTo" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Member Type</label>
+            <select class="form-select form-select-sm" id="fType">
+                <option value="All">All</option>
+                <option value="Student">Students</option>
+                <option value="Employee">Employees</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Search (Issue No / Member)</label>
+            <input type="text" class="form-control form-control-sm" id="fSearch" placeholder="Search..." />
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-primary btn-sm w-100" id="btnSearch">
+                <i class="bi bi-search me-1"></i>Generate
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="lms-grid-wrapper">
+    <div class="lms-grid-scroll" style="max-height:calc(100vh - 280px)">
+        <table class="lms-table">
+            <thead>
+                <tr>
+                    <th>Issue No</th><th>Member Name</th><th>Reg No</th>
+                    <th>Member Type</th><th>Book Title</th><th>ISBN</th>
+                    <th>Issue Date</th><th>Due Date</th><th>Return Date</th><th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="gridBody">
+                <tr><td colspan="10" class="text-center py-4 text-muted">Click <strong>Generate</strong> to load data.</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="lms-action-bar">
+        <span class="text-muted-sm" id="resultCount"></span>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+    function fmtDate(d){if(!d)return'';var dt=new Date(d);return dt.getDate().toString().padStart(2,'0')+'/'+(dt.getMonth()+1).toString().padStart(2,'0')+'/'+dt.getFullYear();}
+    $('#btnSearch').click(function(){
+        var payload = { issuedFrom:$('#fFrom').val()||null, issuedTo:$('#fTo').val()||null,
+            memberType:$('#fType').val(), searchText:$('#fSearch').val().trim()||null };
+        $('#gridBody').html('<tr><td colspan="10" class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading...</td></tr>');
+        $.ajax({url:'/Reports/IssuedBooksData',type:'POST',contentType:'application/json',data:JSON.stringify(payload),
+            success:function(res){
+                if(!res.length){$('#gridBody').html('<tr><td colspan="10" class="text-center py-4 text-muted"><i class="bi bi-inbox me-2"></i>No records.</td></tr>');$('#resultCount').text('0');return;}
+                var html=res.map(function(r){
+                    var status=r.isReturned?'<span class="lms-badge lms-badge-active">Returned</span>':r.isOverdue?'<span class="lms-badge lms-badge-inactive">Overdue '+r.daysOverdue+'d</span>':'<span class="lms-badge lms-badge-info">Issued</span>';
+                    return '<tr><td class="text-muted-sm">'+esc(r.issueNo)+'</td><td><strong>'+esc(r.memberName)+'</strong></td><td class="text-muted-sm">'+esc(r.registrationNo||'')+'</td><td><span class="lms-badge '+(r.memberType==='Student'?'lms-badge-info':'lms-badge-active')+'">'+r.memberType+'</span></td><td>'+esc(r.bookTitle)+'</td><td class="text-muted-sm">'+esc(r.isbn||'')+'</td><td class="text-muted-sm">'+fmtDate(r.issueDate)+'</td><td class="text-muted-sm '+(r.isOverdue&&!r.isReturned?'text-danger fw-bold':'')+'">'+fmtDate(r.dueDate)+'</td><td class="text-muted-sm">'+fmtDate(r.returnDate)+'</td><td>'+status+'</td></tr>';
+                }).join('');
+                $('#gridBody').html(html);$('#resultCount').text(res.length+' record(s)');
+            }
+        });
+    });
+</script>
+}

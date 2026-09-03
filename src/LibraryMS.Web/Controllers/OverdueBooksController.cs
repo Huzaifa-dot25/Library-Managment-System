@@ -1,9 +1,26 @@
+using LibraryMS.Application.Interfaces;
+using LibraryMS.Application.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LibraryMS.Web.Controllers;
 
-/// <summary>Stub — full implementation in Phase 7.</summary>
+[Authorize]
 public class OverdueBooksController : Controller
 {
-    public IActionResult Index() => Content("Overdue Books — coming in Phase 7");
+    private readonly IIssueService _svc;
+    public OverdueBooksController(IIssueService svc) => _svc = svc;
+
+    public IActionResult Index()
+    {
+        ViewData["Title"] = "Manage Overdue Books";
+        return View();
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Search([FromBody] OverdueFilterViewModel filter)
+    {
+        var results = await _svc.GetOverdueBooksAsync(filter);
+        return Json(results);
+    }
 }

@@ -1,8 +1,11 @@
 using LibraryMS.Application.Interfaces;
 using LibraryMS.Application.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LibraryMS.Web.Controllers;
+
+[Authorize(Roles = "Admin")]
 
 public class CategoriesController : Controller
 {

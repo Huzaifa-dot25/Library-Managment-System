@@ -1,0 +1,71 @@
+@{ ViewData["Title"] = "Purchases Report"; }
+
+<div class="lms-page-header">
+    <div>
+        <h4><i class="bi bi-receipt"></i> Purchases Report</h4>
+        <div class="header-subtitle">All purchase orders and invoices. <span class="text-muted-sm">PDF/Excel export — TODO</span></div>
+    </div>
+</div>
+
+<div class="lms-card p-3 mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-2">
+            <label class="form-label">From Date</label>
+            <input type="date" class="form-control form-control-sm" id="fFrom" value="@DateTime.Today.AddMonths(-3).ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">To Date</label>
+            <input type="date" class="form-control form-control-sm" id="fTo" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-primary btn-sm w-100" id="btnSearch">
+                <i class="bi bi-search me-1"></i>Generate
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="lms-grid-wrapper">
+    <div class="lms-grid-scroll" style="max-height:calc(100vh - 280px)">
+        <table class="lms-table">
+            <thead>
+                <tr>
+                    <th>Purchase No</th><th>Supplier</th><th>Date</th>
+                    <th>Type</th><th class="text-center">Items</th>
+                    <th class="text-end">Net Amount</th>
+                </tr>
+            </thead>
+            <tbody id="gridBody">
+                <tr><td colspan="6" class="text-center py-4 text-muted">Click <strong>Generate</strong> to load.</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="lms-action-bar">
+        <span class="text-muted-sm" id="resultCount"></span>
+        <span class="ms-auto fw-bold text-primary" id="totalAmount"></span>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+    $('#btnSearch').click(function(){
+        var payload={fromDate:$('#fFrom').val()||null,toDate:$('#fTo').val()||null,allVendors:true,allPurchaseNums:true,bothTypes:true};
+        $('#gridBody').html('<tr><td colspan="6" class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading...</td></tr>');
+        $.ajax({url:'/Reports/PurchasesData',type:'POST',contentType:'application/json',data:JSON.stringify(payload),
+            success:function(res){
+                if(!res.length){$('#gridBody').html('<tr><td colspan="6" class="text-center py-4 text-muted"><i class="bi bi-inbox me-2"></i>No records.</td></tr>');$('#resultCount').text('0');$('#totalAmount').text('');return;}
+                var total=0;
+                var html=res.map(function(p){
+                    total+=p.netAmount;
+                    var dt=new Date(p.purchaseDate);var dateStr=dt.getDate().toString().padStart(2,'0')+'/'+(dt.getMonth()+1).toString().padStart(2,'0')+'/'+dt.getFullYear();
+                    return '<tr><td class="fw-semibold">'+esc(p.purchaseNumber)+'</td><td>'+esc(p.vendorName||'—')+'</td><td class="text-muted-sm">'+dateStr+'</td><td><span class="lms-badge '+(p.invoiceOrOrderLabel==='Invoice'?'lms-badge-info':'lms-badge-active')+'">'+p.invoiceOrOrderLabel+'</span></td><td class="text-center text-muted-sm">'+p.itemCount+'</td><td class="text-end fw-semibold">PKR '+parseFloat(p.netAmount).toFixed(2)+'</td></tr>';
+                }).join('');
+                $('#gridBody').html(html);
+                $('#resultCount').text(res.length+' record(s)');
+                $('#totalAmount').text('Total: PKR '+total.toFixed(2));
+            }
+        });
+    });
+</script>
+}

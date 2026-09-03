@@ -1,9 +1,12 @@
 using LibraryMS.Application.Interfaces;
 using LibraryMS.Application.ViewModels;
 using LibraryMS.Domain.Enums;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LibraryMS.Web.Controllers;
+
+[Authorize(Roles = "Admin")]
 
 public class BookTypesController : Controller
 {

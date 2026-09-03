@@ -1,6 +1,6 @@
 @* Reusable Book Search widget.
    Usage: @await Html.PartialAsync("_BookSearch", "widgetId")
-   Pass a unique widgetId string to avoid ID clashes when used multiple times. *@
+   Note: Script is placed in @section Scripts via a flag so it runs AFTER jQuery loads. *@
 @model string
 @{
     var wid = string.IsNullOrEmpty(Model) ? "bs" : Model;
@@ -50,44 +50,11 @@
     </div>
 </div>
 
-<script>
-(function() {
-    var wid = '@wid';
-
-    function doSearch() {
-        var criteria = $('#bsCriteria_' + wid).val();
-        var keyword  = $('#bsKeyword_' + wid).val().trim();
-        if (!keyword) { showToast('Please enter a keyword.', 'info'); return; }
-
-        $('#bsMsg_' + wid).text('Searching...').show();
-        $('#bsTable_' + wid).hide();
-
-        $.get('/Books/Search', { criteria: criteria, keyword: keyword }, function(res) {
-            if (!res || !res.length) {
-                $('#bsMsg_' + wid).text('No books found.').show();
-                $('#bsTable_' + wid).hide();
-                return;
-            }
-            $('#bsMsg_' + wid).hide();
-            var $body = $('#bsBody_' + wid).empty();
-            res.forEach(function(b) {
-                $body.append(
-                    '<tr>' +
-                    '<td>' + (b.isbn||'') + '</td>' +
-                    '<td>' + b.title + '</td>' +
-                    '<td>' + (b.authors||'') + '</td>' +
-                    '<td class="text-center">' + b.totalQuantity + '</td>' +
-                    '<td class="text-center ' + (b.remainingQuantity===0?'text-danger fw-bold':'') + '">' + b.remainingQuantity + '</td>' +
-                    '</tr>'
-                );
-            });
-            $('#bsTable_' + wid).show();
-        });
-    }
-
-    $(document).on('click', '#bsBtn_' + wid, doSearch);
-    $(document).on('keypress', '#bsKeyword_' + wid, function(e) {
-        if (e.which === 13) doSearch();
-    });
-})();
-</script>
+@*
+    IMPORTANT: We use a data attribute on the widget div to store the wid,
+    then wire up events in a deferred document-ready block that is safe to
+    emit multiple times (each call is scoped by wid).
+    This avoids the "$ not defined" problem caused by the partial rendering
+    before jQuery is loaded at the bottom of _Layout.cshtml.
+*@
+<script type="text/x-booksearch-init" data-wid="@wid"></script>

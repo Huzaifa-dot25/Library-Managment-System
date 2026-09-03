@@ -1,10 +1,16 @@
 using LibraryMS.Domain.Entities;
 using LibraryMS.Domain.Enums;
+ using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace LibraryMS.Infrastructure.Data;
 
-public class LibraryDbContext : DbContext
+/// <summary>
+/// Inherits IdentityDbContext so ASP.NET Core Identity tables
+/// (AspNetUsers, AspNetRoles, etc.) are created in the same database.
+/// </summary>
+public class LibraryDbContext : IdentityDbContext<IdentityUser>
 {
     public LibraryDbContext(DbContextOptions<LibraryDbContext> options) : base(options) { }
 
@@ -28,7 +34,7 @@ public class LibraryDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        base.OnModelCreating(modelBuilder);
+        base.OnModelCreating(modelBuilder); // must be first — configures Identity tables
 
         // ── Author ───────────────────────────────────────────────────────────
         modelBuilder.Entity<Author>(e =>

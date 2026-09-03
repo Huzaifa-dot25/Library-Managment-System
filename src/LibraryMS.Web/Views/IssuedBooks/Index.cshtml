@@ -1,0 +1,281 @@
+@{
+    ViewData["Title"] = "Manage Issued Books";
+}
+
+<div class="lms-page-header">
+    <div>
+        <h4><i class="bi bi-journals"></i> Manage Issued Books</h4>
+        <div class="header-subtitle">Search and manage all issued book records.</div>
+    </div>
+    <a asp-controller="IssueReturn" asp-action="Index" class="btn-lms-primary">
+        <i class="bi bi-arrow-left-right"></i> Issue / Return
+    </a>
+</div>
+
+<div class="row g-3">
+
+    <!-- ══ Left: Filter Panel ════════════════════════════════════ -->
+    <div class="col-lg-3">
+        <div class="lms-card p-3">
+            <div class="fw-bold mb-3" style="color:var(--lms-primary-dark);font-size:.82rem;text-transform:uppercase;letter-spacing:.05em">
+                <i class="bi bi-funnel me-2"></i>Search Filters
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Issued From</label>
+                <input type="date" class="form-control form-control-sm" id="fFrom"
+                       value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Issued To</label>
+                <input type="date" class="form-control form-control-sm" id="fTo"
+                       value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Issue No / Member Name / Member Id</label>
+                <input type="text" class="form-control form-control-sm" id="fSearch"
+                       placeholder="Search..." />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Member Type</label>
+                <div class="d-flex flex-column gap-1">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="memberType"
+                               id="rbStudent" value="Student" />
+                        <label class="form-check-label form-label mb-0" for="rbStudent">Student</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="memberType"
+                               id="rbEmployee" value="Employee" />
+                        <label class="form-check-label form-label mb-0" for="rbEmployee">Employee</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="memberType"
+                               id="rbAll" value="All" checked />
+                        <label class="form-check-label form-label mb-0" for="rbAll">All</label>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn btn-primary btn-sm w-100" id="btnSearch">
+                <i class="bi bi-search me-1"></i> Search
+            </button>
+        </div>
+    </div>
+
+    <!-- ══ Right: Results Grid ════════════════════════════════════ -->
+    <div class="col-lg-9">
+        <div class="lms-grid-wrapper">
+            <div class="lms-grid-scroll">
+                <table class="lms-table">
+                    <thead>
+                        <tr>
+                            <th style="width:8%">Member Id</th>
+                            <th>Member Name</th>
+                            <th style="width:7%;text-align:center">Edit</th>
+                            <th style="width:10%">Issue No</th>
+                            <th style="width:10%">Member Type</th>
+                            <th style="width:11%">Issue Date</th>
+                            <th style="width:11%">Due Date</th>
+                            <th style="width:9%">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gridBody">
+                        <tr><td colspan="8" class="text-center py-4 text-muted">
+                            <i class="bi bi-search me-2"></i>Set filters and click Search.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="lms-action-bar">
+                <span class="text-muted-sm" id="resultCount">0 records</span>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ══ Edit / Return Modal ═══════════════════════════════════════ -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:520px">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:12px;overflow:hidden">
+            <div class="modal-header border-0 text-white"
+                 style="background:linear-gradient(135deg,#1e3a8a,#1e40af);padding:14px 20px">
+                <h6 class="modal-title fw-bold mb-0">
+                    <i class="bi bi-pencil-square me-2"></i>Issue Record
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="editIssuedBookId" />
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Member</label>
+                        <input type="text" class="form-control bg-light" id="editMemberName" readonly />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Book Title</label>
+                        <input type="text" class="form-control bg-light" id="editBookTitle" readonly />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Issue No</label>
+                        <input type="text" class="form-control bg-light" id="editIssueNo" readonly />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Issue Date</label>
+                        <input type="text" class="form-control bg-light" id="editIssueDate" readonly />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Due Date</label>
+                        <input type="text" class="form-control bg-light" id="editDueDate" readonly />
+                    </div>
+                    <div class="col-12" id="editReturnSection">
+                        <div class="alert alert-warning d-flex align-items-center gap-2 mb-0">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <div>This book has not been returned yet.</div>
+                        </div>
+                    </div>
+                    <div class="col-12" id="editReturnedSection" style="display:none">
+                        <div class="alert alert-success d-flex align-items-center gap-2 mb-0">
+                            <i class="bi bi-check-circle-fill"></i>
+                            <div>Returned on <strong id="editReturnDate"></strong></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light px-4 py-3 gap-2">
+                <button class="btn-lms-success" id="btnReturnFromEdit" style="display:none">
+                    <i class="bi bi-arrow-return-left"></i> Mark as Returned
+                </button>
+                <button class="btn-lms-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    var editModal = new bootstrap.Modal(document.getElementById('editModal'));
+
+    function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function fmtDate(d) {
+        if (!d) return '';
+        var dt = new Date(d);
+        return dt.getDate().toString().padStart(2,'0') + '/' +
+               (dt.getMonth()+1).toString().padStart(2,'0') + '/' + dt.getFullYear();
+    }
+
+    function doSearch() {
+        var payload = {
+            issuedFrom:  $('#fFrom').val()   || null,
+            issuedTo:    $('#fTo').val()     || null,
+            searchText:  $('#fSearch').val().trim() || null,
+            memberType:  $('input[name="memberType"]:checked').val()
+        };
+
+        $('#gridBody').html('<tr><td colspan="8" class="text-center py-3">' +
+            '<div class="spinner-border spinner-border-sm text-primary me-2"></div>Searching...</td></tr>');
+
+        $.ajax({
+            url: '/IssuedBooks/Search', type: 'POST', contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function(res) {
+                if (!res.length) {
+                    $('#gridBody').html('<tr><td colspan="8" class="text-center py-4 text-muted">' +
+                        '<i class="bi bi-inbox me-2"></i>No records found.</td></tr>');
+                    $('#resultCount').text('0 records');
+                    return;
+                }
+
+                var html = res.map(function(r) {
+                    var statusBadge;
+                    if (r.isReturned) {
+                        statusBadge = '<span class="lms-badge lms-badge-active">Returned</span>';
+                    } else if (r.isOverdue) {
+                        statusBadge = '<span class="lms-badge lms-badge-inactive">Overdue ' + r.daysOverdue + 'd</span>';
+                    } else {
+                        statusBadge = '<span class="lms-badge lms-badge-info">Issued</span>';
+                    }
+
+                    return '<tr>' +
+                        '<td class="text-muted-sm">' + r.memberId + '</td>' +
+                        '<td><strong>' + esc(r.memberName) + '</strong>' +
+                            (r.registrationNo ? '<br><span class="text-muted-sm">' + esc(r.registrationNo) + '</span>' : '') +
+                        '</td>' +
+                        '<td class="text-center">' +
+                            '<button class="btn btn-sm btn-outline-primary btn-edit-issue" ' +
+                                'data-id="' + r.issuedBookId + '"><i class="bi bi-pencil"></i></button>' +
+                        '</td>' +
+                        '<td class="text-muted-sm">' + esc(r.issueNo) + '</td>' +
+                        '<td>' +
+                            '<span class="lms-badge ' + (r.memberType==='Student' ? 'lms-badge-info' : 'lms-badge-active') + '">' +
+                            r.memberType + '</span>' +
+                        '</td>' +
+                        '<td class="text-muted-sm">' + fmtDate(r.issueDate) + '</td>' +
+                        '<td class="text-muted-sm ' + (r.isOverdue && !r.isReturned ? 'text-danger fw-bold' : '') + '">' +
+                            fmtDate(r.dueDate) + '</td>' +
+                        '<td>' + statusBadge + '</td>' +
+                        '</tr>';
+                }).join('');
+
+                $('#gridBody').html(html);
+                $('#resultCount').text(res.length + ' record(s)');
+            }
+        });
+    }
+
+    $('#btnSearch').click(doSearch);
+    $('#fSearch').on('keypress', function(e) { if (e.which === 13) doSearch(); });
+
+    // Edit/view record
+    $(document).on('click', '.btn-edit-issue', function() {
+        var id = parseInt($(this).data('id'));
+        $.get('/IssuedBooks/GetDetail', { id: id }, function(res) {
+            if (!res.success) { showToast('Record not found.', 'error'); return; }
+            var r = res.data;
+            $('#editIssuedBookId').val(r.issuedBookId);
+            $('#editMemberName').val(r.memberName);
+            $('#editBookTitle').val(r.bookTitle);
+            $('#editIssueNo').val(r.issueNo);
+            $('#editIssueDate').val(fmtDate(r.issueDate));
+            $('#editDueDate').val(fmtDate(r.dueDate));
+
+            if (r.isReturned) {
+                $('#editReturnSection').hide();
+                $('#editReturnedSection').show();
+                $('#editReturnDate').text(fmtDate(r.returnDate));
+                $('#btnReturnFromEdit').hide();
+            } else {
+                $('#editReturnSection').show();
+                $('#editReturnedSection').hide();
+                $('#btnReturnFromEdit').show();
+            }
+            editModal.show();
+        });
+    });
+
+    // Mark returned from edit modal
+    $('#btnReturnFromEdit').click(function() {
+        var id  = parseInt($('#editIssuedBookId').val());
+        var $btn = $(this).prop('disabled', true).html('<i class="bi bi-hourglass-split me-1"></i>Processing...');
+        $.post('/IssuedBooks/ReturnBook', JSON.stringify(id), function(res) {
+            $btn.prop('disabled', false).html('<i class="bi bi-arrow-return-left me-1"></i>Mark as Returned');
+            if (res.success) {
+                editModal.hide();
+                showToast('Book returned successfully.');
+                doSearch();
+            } else {
+                showToast(res.message || 'Could not process return.', 'error');
+            }
+        }, 'json');
+    });
+
+    // Auto-search on load
+    doSearch();
+</script>
+}

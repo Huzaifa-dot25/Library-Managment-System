@@ -52,6 +52,11 @@ public class CategoryService : ICategoryService
     {
         var entity = await _db.Categories.FindAsync(id);
         if (entity == null) return false;
+        bool inUse = await _db.BookCategories.AnyAsync(bc => bc.CategoryId == id);
+        if (inUse)
+            throw new InvalidOperationException(
+                "Cannot delete this category because it is assigned to one or more books. " +
+                "Remove the category from all books first.");
         _db.Categories.Remove(entity);
         await _db.SaveChangesAsync();
         return true;

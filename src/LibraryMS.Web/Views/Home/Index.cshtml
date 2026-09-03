@@ -1,10 +1,11 @@
-﻿@{
+﻿@model LibraryMS.Application.ViewModels.DashboardStatsViewModel
+@{
     ViewData["Title"] = "Dashboard";
 }
 
 <div class="row g-4">
 
-    <!-- ══ Left: Main Content ════════════════════════════════════════ -->
+    <!-- ══ Left: Main Content ════════════════════════════════════ -->
     <div class="col-xl-9">
 
         <!-- Welcome Banner -->
@@ -12,17 +13,111 @@
             <div class="row align-items-center">
                 <div class="col">
                     <h3><i class="bi bi-journal-bookmark-fill me-2"></i>Welcome to Library Management System</h3>
-                    <p>Manage books, members, purchases, and more from one place.</p>
-                    <div class="welcome-stats">
+                    <p class="mb-0">Manage books, members, purchases, and more — all from one place.</p>
+                    <div class="welcome-stats mt-3">
                         <div class="stat-pill"><i class="bi bi-calendar3"></i><span id="liveDateFull"></span></div>
                         <div class="stat-pill"><i class="bi bi-clock"></i><span id="liveTime"></span></div>
-                        <div class="stat-pill"><i class="bi bi-book"></i>Academic Year 2026-2027</div>
+                        <div class="stat-pill"><i class="bi bi-mortarboard"></i>Academic Year 2026-2027</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Books And Members -->
+        <!-- ── Live Stats Row ─────────────────────────────────── -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:#eff6ff;color:#1e40af">
+                        <i class="bi bi-book-fill"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">@Model.TotalBooks.ToString("N0")</div>
+                        <div class="stat-label">Total Books</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:#ecfdf5;color:#059669">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">@Model.TotalStudents.ToString("N0")</div>
+                        <div class="stat-label">Active Students</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:#fff7ed;color:#ea580c">
+                        <i class="bi bi-journals"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">@Model.BooksIssued.ToString("N0")</div>
+                        <div class="stat-label">Books Issued</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:#fef2f2;color:#dc2626">
+                        <i class="bi bi-alarm-fill"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value text-danger">@Model.OverdueBooks.ToString("N0")</div>
+                        <div class="stat-label">Overdue Books</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:#faf5ff;color:#7c3aed">
+                        <i class="bi bi-person-badge-fill"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">@Model.TotalEmployees.ToString("N0")</div>
+                        <div class="stat-label">Active Employees</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:#f0fdfa;color:#0d9488">
+                        <i class="bi bi-receipt-cutoff"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">@Model.TotalPurchases.ToString("N0")</div>
+                        <div class="stat-label">Total Purchases</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:#fdf2f8;color:#db2777">
+                        <i class="bi bi-tags-fill"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">@Model.TotalCategories.ToString("N0")</div>
+                        <div class="stat-label">Categories</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:#fff7ed;color:#dc2626">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value @(Model.LowStockBooks > 0 ? "text-danger" : "")">
+                            @Model.LowStockBooks.ToString("N0")
+                        </div>
+                        <div class="stat-label">Out of Stock</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Books And Members ──────────────────────────────── -->
         <div class="mb-4">
             <div class="lms-section-label">
                 <i class="bi bi-grid-3x3-gap-fill"></i> Books And Members
@@ -68,12 +163,19 @@
                     <a asp-controller="OverdueBooks" asp-action="Index" class="dash-tile tile-red">
                         <div class="tile-icon"><i class="bi bi-alarm-fill"></i></div>
                         <span>Overdue Books</span>
+                        @if (Model.OverdueBooks > 0)
+                        {
+                            <span class="position-absolute top-0 end-0 translate-middle badge rounded-pill bg-danger"
+                                  style="font-size:.6rem;margin:.4rem">
+                                @Model.OverdueBooks
+                            </span>
+                        }
                     </a>
                 </div>
             </div>
         </div>
 
-        <!-- Authors & Publishers -->
+        <!-- ── Authors & Publishers ───────────────────────────── -->
         <div class="mb-4">
             <div class="lms-section-label">
                 <i class="bi bi-people-fill"></i> Book Authors And Publishers
@@ -94,7 +196,7 @@
             </div>
         </div>
 
-        <!-- Categories -->
+        <!-- ── Categories ────────────────────────────────────── -->
         <div class="mb-4">
             <div class="lms-section-label">
                 <i class="bi bi-tags-fill"></i> Book Categories
@@ -115,9 +217,9 @@
             </div>
         </div>
 
-    </div>
+    </div><!-- /col-xl-9 -->
 
-    <!-- ══ Right: Widgets ════════════════════════════════════════════ -->
+    <!-- ══ Right: Widgets ════════════════════════════════════════ -->
     <div class="col-xl-3">
 
         @await Html.PartialAsync("_BookSearch", "dashboard")
@@ -130,44 +232,93 @@
             <div class="lms-widget-body">
                 <div class="mb-2">
                     <label class="form-label">ISBN No / Book Title</label>
-                    <input type="text" class="form-control form-control-sm" id="issuedSearchKeyword" placeholder="ISBN or title..." />
+                    <input type="text" class="form-control form-control-sm"
+                           id="issuedSearchKeyword" placeholder="ISBN or title..." />
                 </div>
                 <button class="btn btn-sm w-100 btn-lms-primary" id="btnIssuedSearch">
                     <i class="bi bi-search"></i> Search
                 </button>
-                <div class="mt-2" style="max-height:200px;overflow-y:auto">
-                    <table class="table table-sm table-bordered mb-0" id="issuedSearchResults" style="font-size:.75rem;display:none">
-                        <thead class="table-primary"><tr><th>Date</th><th>ISBN</th><th>Title</th><th>Member</th></tr></thead>
-                        <tbody id="issuedSearchBody"></tbody>
-                    </table>
-                    <div class="text-muted-sm mt-1 text-center" id="issuedSearchMsg" style="display:none"></div>
+                <div class="mt-2">
+                    <div class="text-muted-sm text-center py-1"
+                         id="issuedSearchMsg" style="display:none"></div>
+                    <div style="max-height:200px;overflow-y:auto">
+                        <table class="table table-sm table-bordered mb-0"
+                               id="issuedSearchResults"
+                               style="font-size:.73rem;display:none">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Title</th>
+                                    <th>Member</th>
+                                </tr>
+                            </thead>
+                            <tbody id="issuedSearchBody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
 
-    </div>
-</div>
+        <!-- Quick Links Widget -->
+        <div class="lms-widget mt-3">
+            <div class="lms-widget-header">
+                <i class="bi bi-bar-chart-line"></i> Reports
+            </div>
+            <div class="lms-widget-body p-2">
+                <div class="d-flex flex-column gap-1">
+                    <a asp-controller="Reports" asp-action="BooksInventory"
+                       class="btn btn-sm btn-outline-primary text-start">
+                        <i class="bi bi-database me-2"></i>Books Inventory
+                    </a>
+                    <a asp-controller="Reports" asp-action="IssuedBooks"
+                       class="btn btn-sm btn-outline-primary text-start">
+                        <i class="bi bi-journal-check me-2"></i>Issued Books
+                    </a>
+                    <a asp-controller="Reports" asp-action="Overdue"
+                       class="btn btn-sm btn-outline-danger text-start">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Overdue Books
+                    </a>
+                    <a asp-controller="Reports" asp-action="Purchases"
+                       class="btn btn-sm btn-outline-primary text-start">
+                        <i class="bi bi-receipt me-2"></i>Purchases
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /col-xl-3 -->
+
+</div><!-- /row -->
 
 @section Scripts {
 <script>
     // Issued Book Search
-    $('#btnIssuedSearch, #issuedSearchKeyword').on('click keypress', function(e) {
-        if (e.type === 'keypress' && e.which !== 13) return;
+    function doIssuedSearch() {
         var keyword = $('#issuedSearchKeyword').val().trim();
-        if (!keyword) { showToast('Please enter a keyword.', 'info'); return; }
-        $.get('/IssuedBooks/Search', { keyword }, function(res) {
-            var $b = $('#issuedSearchBody').empty();
+        if (!keyword) { showToast('Enter a keyword.', 'info'); return; }
+
+        $('#issuedSearchMsg').text('Searching...').show();
+        $('#issuedSearchResults').hide();
+
+        $.get('/IssuedBooks/Search', { keyword: keyword }, function(res) {
             if (!res || !res.length) {
-                $('#issuedSearchResults').hide();
                 $('#issuedSearchMsg').text('No issued books found.').show();
+                $('#issuedSearchResults').hide();
                 return;
             }
             $('#issuedSearchMsg').hide();
+            var $b = $('#issuedSearchBody').empty();
             res.forEach(function(ib) {
-                $b.append('<tr><td>' + ib.issueDate + '</td><td>' + (ib.isbn||'') + '</td><td>' + ib.bookTitle + '</td><td>' + ib.memberName + '</td></tr>');
+                $b.append('<tr><td>' + ib.issueDate + '</td><td>' +
+                    ib.bookTitle + '</td><td>' + ib.memberName + '</td></tr>');
             });
             $('#issuedSearchResults').show();
         });
+    }
+
+    $('#btnIssuedSearch').click(doIssuedSearch);
+    $('#issuedSearchKeyword').on('keypress', function(e) {
+        if (e.which === 13) doIssuedSearch();
     });
 </script>
 }

@@ -52,6 +52,11 @@ public class VendorService : IVendorService
     {
         var e = await _db.Vendors.FindAsync(id);
         if (e == null) return false;
+        bool inUse = await _db.Books.AnyAsync(b => b.VendorId == id);
+        if (inUse)
+            throw new InvalidOperationException(
+                "Cannot delete this vendor because they are assigned to one or more books. " +
+                "Update those books first.");
         _db.Vendors.Remove(e);
         await _db.SaveChangesAsync();
         return true;

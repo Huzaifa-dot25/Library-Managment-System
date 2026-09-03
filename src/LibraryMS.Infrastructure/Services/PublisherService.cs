@@ -83,6 +83,11 @@ public class PublisherService : IPublisherService
     {
         var entity = await _db.Publishers.FindAsync(id);
         if (entity == null) return false;
+        bool inUse = await _db.Books.AnyAsync(b => b.PublisherId == id);
+        if (inUse)
+            throw new InvalidOperationException(
+                "Cannot delete this publisher because they are assigned to one or more books. " +
+                "Update those books first.");
         _db.Publishers.Remove(entity);
         await _db.SaveChangesAsync();
         return true;

@@ -46,10 +46,20 @@ function bindEvents(){
         if(id===0){$r.remove();return;}if(!confirmDelete('Delete session?'))return;
         $.post('/Lookup/DeleteSession',JSON.stringify(id),function(r){if(r.success){$r.fadeOut(200,function(){$(this).remove();});showToast('Deleted.');}else showToast(r.message,'error');},'json');
     });}
-$('#btnSave').click(function(){
-    var p=[];$('#gridBody tr[data-dirty="true"]').each(function(){var n=$(this).find('.col-name').val().trim();if(!n)return;p.push({sessionId:parseInt($(this).attr('data-id'))||0,sessionName:n,startDate:$(this).find('.col-start').val()||null,endDate:$(this).find('.col-end').val()||null});});
-    if(!p.length){showToast('No changes.','info');return;}
-    $.ajax({url:'/Lookup/SaveSession',type:'POST',contentType:'application/json',data:JSON.stringify(p[0]),success:function(r){if(r.success){showToast('Saved.');loadGrid();}else showToast(r.message,'error');}});
+$('#btnSave').click(async function(){
+    var rows=$('#gridBody tr[data-dirty="true"]');
+    if(!rows.length){showToast('No changes.','info');return;}
+    var saved=0;
+    for(var i=0;i<rows.length;i++){
+        var $r=$(rows[i]);
+        var n=$r.find('.col-name').val().trim();
+        if(!n)continue;
+        var p={sessionId:parseInt($r.attr('data-id'))||0,sessionName:n,startDate:$r.find('.col-start').val()||null,endDate:$r.find('.col-end').val()||null};
+        await $.ajax({url:'/Lookup/SaveSession',type:'POST',contentType:'application/json',data:JSON.stringify(p)});
+        saved++;
+    }
+    if(saved)showToast(saved+' session(s) saved.');
+    loadGrid();
 });
 $('#btnAddRow').click(function(){$('#gridBody').append(blankRow());bindEvents();$('#gridBody tr:last-child .col-name').focus();});
 loadGrid();

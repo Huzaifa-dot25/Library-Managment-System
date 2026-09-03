@@ -248,6 +248,12 @@ public class MemberService : IMemberService
     {
         var e = await _db.Students.FindAsync(id);
         if (e == null) return false;
+        bool hasActiveIssues = await _db.IssuedBooks
+            .AnyAsync(i => i.StudentId == id && i.ReturnDate == null);
+        if (hasActiveIssues)
+            throw new InvalidOperationException(
+                "Cannot delete this student because they have books currently issued. " +
+                "Return all books first.");
         _db.Students.Remove(e);
         await _db.SaveChangesAsync();
         return true;
@@ -330,6 +336,12 @@ public class MemberService : IMemberService
     {
         var e = await _db.Employees.FindAsync(id);
         if (e == null) return false;
+        bool hasActiveIssues = await _db.IssuedBooks
+            .AnyAsync(i => i.EmployeeId == id && i.ReturnDate == null);
+        if (hasActiveIssues)
+            throw new InvalidOperationException(
+                "Cannot delete this employee because they have books currently issued. " +
+                "Return all books first.");
         _db.Employees.Remove(e);
         await _db.SaveChangesAsync();
         return true;

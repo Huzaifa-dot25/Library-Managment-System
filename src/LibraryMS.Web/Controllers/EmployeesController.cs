@@ -1,9 +1,11 @@
 using LibraryMS.Application.Interfaces;
 using LibraryMS.Application.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LibraryMS.Web.Controllers;
 
+[Authorize]
 public class EmployeesController : Controller
 {
     private readonly IMemberService _svc;

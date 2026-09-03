@@ -69,6 +69,12 @@ public class AuthorService : IAuthorService
     {
         var entity = await _db.Authors.FindAsync(id);
         if (entity == null) return false;
+        // Check if any books reference this author
+        bool inUse = await _db.BookAuthors.AnyAsync(ba => ba.AuthorId == id);
+        if (inUse)
+            throw new InvalidOperationException(
+                "Cannot delete this author because they are assigned to one or more books. " +
+                "Remove the author from all books first.");
         _db.Authors.Remove(entity);
         await _db.SaveChangesAsync();
         return true;
