@@ -160,31 +160,5 @@ A web-based school library management system built with ASP.NET Core MVC, Entity
 
 ---
 
-### Phase 9 — Authentication & Polish
+###
 
-**US-027** As an admin, I want to log in with a username/password and be assigned the Admin or Librarian role.
-
-**US-028** As the system, all module controllers must redirect unauthenticated users to the login page.
-
-**US-029** As a developer, I want seed data (authors, publishers, categories, books) automatically applied on first run so the app is immediately usable.
-
-#### Acceptance Criteria
-
-- AC-027-1: ASP.NET Core Identity is used for auth.
-- AC-028-1: `[Authorize]` is applied at the controller level; Admin-only areas use `[Authorize(Roles = "Admin")]`.
-- AC-029-1: Seed runs inside `Program.cs` using `IServiceScope` — it is idempotent (safe to run multiple times).
-- AC-029-2: A README documents connection string setup, migration command, and default admin credentials.
-
----
-
-## Non-Functional Requirements
-
-| ID    | Requirement                                                                                      |
-|-------|--------------------------------------------------------------------------------------------------|
-| NFR-1 | All database calls use `async/await` (no synchronous EF Core calls).                            |
-| NFR-2 | Views receive DTOs/ViewModels, never raw entity objects.                                         |
-| NFR-3 | Server-side validation via Data Annotations on all ViewModels; client-side via jQuery Validate. |
-| NFR-4 | Bootstrap 5 used for all layout and components.                                                  |
-| NFR-5 | Server-side paging on any grid that may exceed 100 rows.                                         |
-| NFR-6 | File uploads restricted to images (jpg, jpeg, png, gif); max size 5 MB.                         |
-| NFR-7 | Connection strings and secrets must not be committed to source control (use user-secrets or env).|

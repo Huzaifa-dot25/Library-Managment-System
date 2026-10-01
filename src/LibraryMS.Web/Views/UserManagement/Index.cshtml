@@ -1,0 +1,159 @@
+@model List<LibraryMS.Application.ViewModels.UserListViewModel>
+@{
+    ViewData["Title"] = "User Management";
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="lms-success-banner mb-3">
+        <i class="bi bi-check-circle-fill"></i> @TempData["Success"]
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger d-flex gap-2 align-items-center mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill"></i> @TempData["Error"]
+    </div>
+}
+
+<div class="lms-page-header">
+    <div>
+        <h4><i class="bi bi-people-fill"></i> User Management</h4>
+        <div class="header-subtitle">Manage library system accounts and roles.</div>
+    </div>
+    <a asp-action="Create" class="btn-lms-primary">
+        <i class="bi bi-person-plus-fill"></i> Add New User
+    </a>
+</div>
+
+<div class="lms-grid-wrapper">
+    <div class="lms-grid-scroll">
+        <table class="lms-table">
+            <thead>
+                <tr>
+                    <th style="width:5%">#</th>
+                    <th>Email / Username</th>
+                    <th style="width:14%">Role</th>
+                    <th style="width:12%;text-align:center">Email Confirmed</th>
+                    <th style="width:12%;text-align:center">Status</th>
+                    <th style="width:22%;text-align:center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted">
+                            <i class="bi bi-inbox me-2"></i>No users found.
+                        </td>
+                    </tr>
+                }
+                @{ int i = 1; }
+                @foreach (var u in Model)
+                {
+                    var isCurrentUser = u.UserName == User.Identity!.Name;
+                    <tr>
+                        <td class="text-muted-sm">@(i++)</td>
+                        <td>
+                            <strong>@u.Email</strong>
+                            @if (isCurrentUser)
+                            {
+                                <span class="lms-badge lms-badge-info ms-2">You</span>
+                            }
+                        </td>
+                        <td>
+                            @if (u.Role == "Admin")
+                            {
+                                <span class="lms-badge" style="background:#fee2e2;color:#991b1b">
+                                    <i class="bi bi-shield-fill me-1"></i>Admin
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="lms-badge lms-badge-info">
+                                    <i class="bi bi-person-fill me-1"></i>@u.Role
+                                </span>
+                            }
+                        </td>
+                        <td class="text-center">
+                            @if (u.EmailConfirmed)
+                            {
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                            }
+                            else
+                            {
+                                <i class="bi bi-x-circle-fill text-danger"></i>
+                            }
+                        </td>
+                        <td class="text-center">
+                            @if (u.IsLockedOut)
+                            {
+                                <span class="lms-badge lms-badge-inactive">
+                                    <i class="bi bi-lock-fill me-1"></i>Locked
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="lms-badge lms-badge-active">
+                                    <i class="bi bi-unlock-fill me-1"></i>Active
+                                </span>
+                            }
+                        </td>
+                        <td class="text-center">
+                            <div class="d-flex gap-1 justify-content-center flex-wrap">
+                                <!-- Edit -->
+                                <a asp-action="Edit" asp-route-id="@u.Id"
+                                   class="btn btn-sm btn-outline-primary" title="Edit User">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+
+                                <!-- Reset Password -->
+                                <a asp-action="ResetPassword" asp-route-id="@u.Id"
+                                   class="btn btn-sm btn-outline-warning" title="Reset Password">
+                                    <i class="bi bi-key-fill"></i>
+                                </a>
+
+                                <!-- Lock / Unlock -->
+                                @if (!isCurrentUser)
+                                {
+                                    <form asp-action="ToggleLockout" asp-route-id="@u.Id"
+                                          method="post" class="d-inline"
+                                          onsubmit="return confirm('@(u.IsLockedOut ? "Unlock" : "Lock out") this user?')">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit"
+                                                class="btn btn-sm @(u.IsLockedOut ? "btn-outline-success" : "btn-outline-secondary")"
+                                                title="@(u.IsLockedOut ? "Unlock User" : "Lock Out User")">
+                                            <i class="bi bi-@(u.IsLockedOut ? "unlock" : "lock")"></i>
+                                        </button>
+                                    </form>
+
+                                    <!-- Delete -->
+                                    <form asp-action="Delete" asp-route-id="@u.Id"
+                                          method="post" class="d-inline"
+                                          onsubmit="return confirm('Permanently delete user @u.Email? This cannot be undone.')">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit"
+                                                class="btn btn-sm btn-outline-danger"
+                                                title="Delete User">
+                                            <i class="bi bi-trash3"></i>
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="lms-action-bar">
+        <span class="text-muted-sm">
+            <i class="bi bi-people me-1"></i>@Model.Count user(s) total
+        </span>
+        <div class="ms-auto d-flex gap-3 text-muted-sm">
+            <span><i class="bi bi-shield-fill text-danger me-1"></i>Admin — full system access</span>
+            <span><i class="bi bi-person-fill text-primary me-1"></i>Librarian — day-to-day operations</span>
+        </div>
+    </div>
+</div>

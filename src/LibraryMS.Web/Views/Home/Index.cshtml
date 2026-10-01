@@ -217,6 +217,24 @@
             </div>
         </div>
 
+        @if (User.IsInRole("Admin"))
+        {
+            <!-- ── System (Admin only) ────────────────────────── -->
+            <div class="mb-4">
+                <div class="lms-section-label">
+                    <i class="bi bi-gear-fill"></i> System Administration
+                </div>
+                <div class="row g-3">
+                    <div class="col-6 col-md-4 col-lg-3">
+                        <a asp-controller="UserManagement" asp-action="Index" class="dash-tile tile-red">
+                            <div class="tile-icon"><i class="bi bi-people-fill"></i></div>
+                            <span>User Management</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+
     </div><!-- /col-xl-9 -->
 
     <!-- ══ Right: Widgets ════════════════════════════════════════ -->

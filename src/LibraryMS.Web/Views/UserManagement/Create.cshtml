@@ -1,0 +1,126 @@
+@model LibraryMS.Application.ViewModels.CreateUserViewModel
+@{
+    ViewData["Title"] = "Add New User";
+}
+
+<div class="lms-page-header">
+    <div>
+        <h4><i class="bi bi-person-plus-fill"></i> Add New User</h4>
+        <div class="header-subtitle">Create a new library system account.</div>
+    </div>
+    <a asp-action="Index" class="btn-lms-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Users
+    </a>
+</div>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger alert-dismissible d-flex gap-2 mb-3">
+        <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+        <div>
+            @foreach (var e in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <div>@e.ErrorMessage</div>
+            }
+        </div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="lms-card p-4">
+
+            <form asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="mb-3">
+                    <label asp-for="FullName" class="form-label"></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-person"></i></span>
+                        <input asp-for="FullName" class="form-control" placeholder="e.g. Ayesha Khan" />
+                    </div>
+                    <span asp-validation-for="FullName" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Email" class="form-label"></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                        <input asp-for="Email" type="email" class="form-control"
+                               placeholder="user@library.com" />
+                    </div>
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Role" class="form-label">Role</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-shield"></i></span>
+                        <select asp-for="Role" class="form-select">
+                            <option value="Librarian">Librarian — day-to-day operations</option>
+                            <option value="Admin">Admin — full system access</option>
+                        </select>
+                    </div>
+                    <span asp-validation-for="Role" class="text-danger small"></span>
+                </div>
+
+                <hr class="my-3" />
+
+                <div class="mb-3">
+                    <label asp-for="Password" class="form-label"></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                        <input asp-for="Password" type="password" class="form-control"
+                               placeholder="Min 6 characters" id="pwdInput" />
+                        <button type="button" class="btn btn-outline-secondary"
+                                onclick="togglePwd('pwdInput', this)" tabindex="-1">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                    <span asp-validation-for="Password" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="ConfirmPassword" class="form-label"></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                        <input asp-for="ConfirmPassword" type="password" class="form-control"
+                               placeholder="Re-enter password" id="pwdConfirm" />
+                        <button type="button" class="btn btn-outline-secondary"
+                                onclick="togglePwd('pwdConfirm', this)" tabindex="-1">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                    <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                </div>
+
+                <div class="lms-action-bar" style="border-radius:var(--radius-sm)">
+                    <button type="submit" class="btn-lms-primary">
+                        <i class="bi bi-person-plus-fill"></i> Create User
+                    </button>
+                    <a asp-action="Index" class="btn-lms-secondary">
+                        <i class="bi bi-x-lg"></i> Cancel
+                    </a>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function togglePwd(inputId, btn) {
+        var inp = document.getElementById(inputId);
+        var icon = btn.querySelector('i');
+        if (inp.type === 'password') {
+            inp.type = 'text';
+            icon.className = 'bi bi-eye-slash';
+        } else {
+            inp.type = 'password';
+            icon.className = 'bi bi-eye';
+        }
+    }
+</script>
+}
